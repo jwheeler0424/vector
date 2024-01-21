@@ -1,25 +1,41 @@
-export type HandlerFunction = (...args: unknown[]) => void;
+import { HandlerMap } from '@/types/handler';
 
-type RouterNodeInterface = {
-  prefix: string;
-  size: number;
-  parent: RouterNode | null;
-  children: Map<string, RouterNode>;
-  handler: HandlerFunction | null;
-
-  isLeaf: boolean;
-  isRegex: boolean;
-  isParam: boolean;
-  isWildcard: boolean;
-};
-
+/**
+ * Router Node Data Structure
+ * --------------------------------------------------------------------------------
+ * @name RouterNode
+ * @implements {RouterNodeInterface}
+ * @description
+ * This is the data and pointers for the router trie. Each node stores the prefix 
+ * of the node, the parent node, the children of the node, the handlers, and the 
+ * node flags (isLeaf, isRegex, isParam, isWildcard). The children map is a map 
+ * where the key is the prefix of the child and the value is the child node. The 
+ * handlers map is a map where the key is the method and the value is the handler 
+ * function or boolean value to allow early search termination if the path does not 
+ * contain the requested method.
+ * 
+ * @property {string | null} prefix - The prefix of the node
+ * @property {number} size - The number of children of the node
+ * @property {RouterNode | null} parent - The parent of the node
+ * @property {ChildrenMap | null} children - The children of the node mapped by prefix
+ * @property {HandlerMap | null} handlers - The handlers of the node mapped by method with a boolean value or handler function
+ * @property {boolean} isLeaf - Whether the node is a leaf / end of a path
+ * @property {boolean} isRegex - Whether the node is a regex pattern
+ * @property {boolean} isParam - Whether the node is parametrized
+ * @property {boolean} isWildcard - Whether the node is a wildcard
+ * 
+ * @example
+ * const node = new RouterNode();
+ */
 export class RouterNode implements RouterNodeInterface {
   /* Router Node data */
-  public prefix: string;
+  public prefix: string | null;
   public size: number;
   public parent: RouterNode | null;
-  public children: Map<string, RouterNode>;
-  public handler: HandlerFunction | null;
+
+  /* Router Node maps */
+  public children: ChildrenMap | null;
+  public handlers: HandlerMap | null;
 
   /* Router Node flags */
   public isLeaf: boolean;
@@ -27,24 +43,15 @@ export class RouterNode implements RouterNodeInterface {
   public isParam: boolean;
   public isWildcard: boolean;
 
-  constructor(
-    prefix?: string,
-    parent?: RouterNode,
-    handler?: HandlerFunction,
-    isLeaf?: boolean,
-    isRegex?: boolean,
-    isParam?: boolean,
-    isWildcard?: boolean,
-  ) {
-    this.prefix = prefix || '';
-    this.size = prefix ? prefix.length : 0;
-    this.parent = parent || null;
-    this.children = new Map();
-    this.handler = handler || null;
-
-    this.isLeaf = !!isLeaf;
-    this.isRegex = !!isRegex;
-    this.isParam = !!isParam;
-    this.isWildcard = !!isWildcard;
+  constructor() {
+    this.prefix = null;
+    this.size = 0;
+    this.parent = null;
+    this.children = null;
+    this.handlers = null;
+    this.isLeaf = false;
+    this.isRegex = false;
+    this.isParam = false;
+    this.isWildcard = false;
   }
 }
