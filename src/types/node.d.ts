@@ -1,9 +1,12 @@
-type RouterNodeInterface = {
+import type { HandlerFunction } from '@/types/handler';
+
+type RouterNode = {
   prefix: string | null;
   size: number;
   parent: RouterNode | null;
+  handler: HandlerFunction | null;
+
   children: Map<string, RouterNode> | null;
-  handlers: HandlerMap | null;
 
   isLeaf: boolean;
   isRegex: boolean;

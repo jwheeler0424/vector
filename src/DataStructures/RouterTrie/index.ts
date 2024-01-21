@@ -1,7 +1,9 @@
-import { type HandlerFunction, RouterNode } from "./RouterNode"
+import type { HandlerFunction } from "@/types/handler";
+import type { RouterNode } from "@/types/node";
+import { Node } from "./Node";
 
-export type RouterTrieInterface = {
-  insert(path: string, handler: HandlerFunction): void;
+export type RouterTrie = {
+  insert(path: string, method: HttpMethod, handler: HandlerFunction): void;
   // find(value: string): IRadixNode<DataType> | undefined;
   // remove(key: string | string[]): void;
   // contains(key: string | string[]): boolean;
@@ -13,40 +15,46 @@ export type RouterTrieInterface = {
   // getDepth(): number;
 }
 
-export default class RouterTrie implements RouterTrieInterface {
+export default class Trie implements RouterTrie {
   private root: RouterNode;
 
   constructor() {
-    this.root = new RouterNode();
+    this.root = new Node();
   }
 
-  insert(path: string, handler: HandlerFunction): void {
+  insert(path: string, method: HttpMethod, handler: HandlerFunction): void {
     if (!path) {
       throw new Error('Path is required');
     }
 
-    const pathChunks = path.split('/').slice(1);
+    const pathChunks = path.split('/');
+    const trailingSlash = path.at(-1) === '/' && path.length > 1;
 
+    if (pathChunks[0] !== '') {
+      throw new Error('Path must start with a /');
+    }
+    method = method.toUpperCase() as HttpMethod;
+    
     let currentNode = this.root;
+    let currentIndex = 0;
 
-    pathChunks.forEach((chunk, index) => {
-      const child = currentNode.children.get(chunk);
-      const isLeaf = index === pathChunks.length - 1;
-      const isParam = chunk.startsWith(':');
-      const isWildcard = chunk === '*';
-      const isRegex = chunk.startsWith('(') && chunk.endsWith(')');
+    pathChunks[0] = method;
+
+    while (currentIndex < pathChunks.length) {
+      const prefix = pathChunks[currentIndex];
+      const child = currentNode.children ? currentNode.children.get(prefix) : undefined;
+      const isLeaf = currentIndex === pathChunks.length - 1;
+      const isParam = prefix.startsWith(':');
+      const isWildcard = prefix === '*';
+      const isRegex = prefix.startsWith('(') && prefix.endsWith(')');
 
       if (child && isLeaf) {
         throw new Error('Path already exists');
       }
 
-      if (!child) {
-        currentNode.children.set(chunk, new RouterNode(chunk, currentNode, handler, isLeaf, isRegex, isParam, isWildcard));
-        return;
-      }
-
-      currentNode = child;
-    });
+      // Increment the current index
+      currentIndex++;
+    }
     
   }
 

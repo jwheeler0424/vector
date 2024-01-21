@@ -1,10 +1,10 @@
-import { HandlerMap } from '@/types/handler';
+import type { HandlerFunction } from '@/types/handler';
 
 /**
  * Router Node Data Structure
  * --------------------------------------------------------------------------------
- * @name RouterNode
- * @implements {RouterNodeInterface}
+ * @name Node
+ * @implements {RouterNode}
  * 
  * @example
  * const node = new RouterNode();
@@ -21,22 +21,22 @@ import { HandlerMap } from '@/types/handler';
  * @property {string | null} prefix - The prefix of the node
  * @property {number} size - The number of children of the node
  * @property {RouterNode | null} parent - The parent of the node
+ * @property {HandlerFunction | null} handler - The handler function of the node
  * @property {ChildrenMap | null} children - The children of the node mapped by prefix
- * @property {HandlerMap | null} handlers - The handlers of the node mapped by method with a boolean value or handler function
  * @property {boolean} isLeaf - Whether the node is a leaf / end of a path
  * @property {boolean} isRegex - Whether the node is a regex pattern
  * @property {boolean} isParam - Whether the node is parametrized
  * @property {boolean} isWildcard - Whether the node is a wildcard
  */
-export class RouterNode implements RouterNodeInterface {
+export class Node implements RouterNode {
   /* Router Node data */
   public prefix: string | null;
   public size: number;
   public parent: RouterNode | null;
+  public handler: HandlerFunction | null;
 
   /* Router Node maps */
   public children: ChildrenMap | null;
-  public handlers: HandlerMap | null;
 
   /* Router Node flags */
   public isLeaf: boolean;
@@ -49,7 +49,7 @@ export class RouterNode implements RouterNodeInterface {
     this.size = 0;
     this.parent = null;
     this.children = null;
-    this.handlers = null;
+    this.handler = null;
     this.isLeaf = false;
     this.isRegex = false;
     this.isParam = false;
