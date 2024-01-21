@@ -1,0 +1,17 @@
+Router Node:
+
+This is the data and pointer for the router trie. Each node needs to store the label/prefix of the node, the parent node, the children of the node, the handler function, and the node flags (e.g. is it a wildcard node, is it a catch-all node, etc.).
+
+type node struct {
+    prefix      string
+    size        int
+    parent      *node
+    children    []*node
+    handler     HandlerFunc
+    isLeaf      bool
+    isRegex     bool
+    isParam     bool
+    isWildcard  bool
+}
+
+When inserting a route the router will parse the path to split on each slash as a node chunk. Each chunk will be evaluated to apply the appropriate flags and then insert the nodes into the trie. The router will also store the handler function for the node and the size of the prefix for the node. The router will also store the parent node for the node and the children nodes for the node. If inserting a regular expression inside of the path/prefix, it must be surrounded by parentheses. The router will then store the regular expression as the prefix for the node and set the isRegex flag to true.
