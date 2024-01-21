@@ -5,6 +5,10 @@ import { HandlerMap } from '@/types/handler';
  * --------------------------------------------------------------------------------
  * @name RouterNode
  * @implements {RouterNodeInterface}
+ * 
+ * @example
+ * const node = new RouterNode();
+ * 
  * @description
  * This is the data and pointers for the router trie. Each node stores the prefix 
  * of the node, the parent node, the children of the node, the handlers, and the 
@@ -23,9 +27,6 @@ import { HandlerMap } from '@/types/handler';
  * @property {boolean} isRegex - Whether the node is a regex pattern
  * @property {boolean} isParam - Whether the node is parametrized
  * @property {boolean} isWildcard - Whether the node is a wildcard
- * 
- * @example
- * const node = new RouterNode();
  */
 export class RouterNode implements RouterNodeInterface {
   /* Router Node data */
