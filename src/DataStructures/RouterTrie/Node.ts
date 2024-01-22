@@ -1,22 +1,22 @@
+import type { ChildrenMap, RouterNode } from '@/types/node';
 import type { HandlerFunction } from '@/types/handler';
 
 /**
- * Router Node Data Structure
+ * Router Node Structure
  * --------------------------------------------------------------------------------
  * @name Node
  * @implements {RouterNode}
  * 
  * @example
- * const node = new RouterNode();
+ * const node = new Node();
  * 
  * @description
  * This is the data and pointers for the router trie. Each node stores the prefix 
- * of the node, the parent node, the children of the node, the handlers, and the 
- * node flags (isLeaf, isRegex, isParam, isWildcard). The children map is a map 
- * where the key is the prefix of the child and the value is the child node. The 
- * handlers map is a map where the key is the method and the value is the handler 
- * function or boolean value to allow early search termination if the path does not 
- * contain the requested method.
+ * of the node, the parent node, the children of the node, the handler function, 
+ * and the node flags (isLeaf, isRegex, isParam, isWildcard). The children map is a 
+ * map where the key is the prefix of the child and the value is the child node. 
+ * The handler function is a function definition which determines the interaction
+ * of the http request.
  * 
  * @property {string | null} prefix - The prefix of the node
  * @property {number} size - The number of children of the node
