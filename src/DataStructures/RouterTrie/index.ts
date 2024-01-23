@@ -48,6 +48,7 @@ import { Node } from './Node';
 export type RouterTrie = {
   insert(path: string, method: UCaseHttpMethod, handler: HandlerFunction): void;
   match(path: string, method?: UCaseHttpMethod): MatchedRoute | false;
+  // depricated(path: string, method?: UCaseHttpMethod): void;
   // remove(key: string | string[]): void;
   // contains(key: string | string[]): boolean;
   // startsWith(prefix: string): Promise<Array<string>>;
