@@ -1,10 +1,11 @@
-import type { HandlerFunction } from "@/types/handler";
-import type { RouterNode } from "@/types/node";
-import { Node } from "./Node";
+import type { HandlerFunction } from '@/types/handler';
+import { type UCaseHttpMethod, Methods } from '@/types/http';
+import type { RouterNode } from '@/types/node';
+import { Node } from './Node';
 
 export type RouterTrie = {
-  insert(path: string, method: HttpMethod, handler: HandlerFunction): void;
-  // find(value: string): IRadixNode<DataType> | undefined;
+  insert(path: string, method: UCaseHttpMethod, handler: HandlerFunction): void;
+  match(path: string, method?: UCaseHttpMethod): RouterNode | undefined;
   // remove(key: string | string[]): void;
   // contains(key: string | string[]): boolean;
   // startsWith(prefix: string): Promise<Array<string>>;
@@ -12,28 +13,56 @@ export type RouterTrie = {
   // display(): void;
   // toObject(): Record<string, unknown>
   // toString(): string;
-  // getDepth(): number;
-}
+  getDepth(): number;
+};
 
 export default class Trie implements RouterTrie {
   private root: RouterNode;
+  private depth: number;
 
   constructor() {
     this.root = new Node();
+    this.depth = 0;
   }
 
-  insert(path: string, method: HttpMethod, handler: HandlerFunction): void {
-    if (!path) {
-      throw new Error('Path is required');
-    }
+  /**
+   * RouterTrie - Insert
+   * ----------------------------------------------------------------------------
+   * Insert a path into the trie.
+   * 
+   * @name insert
+   * @description
+   * This method inserts a path into the trie. The path is inserted as an array
+   * of chunks. The chunks are split by the forward slash '/' character. The time
+   * complexity of this method is O(n) where n is the length of the path.
+   * 
+   * @example
+   * const trie = new Trie();
+   * 
+   * trie.insert('/users/:id', 'GET', () => {});
+   * trie.insert('/users/:id/:name', 'GET', () => {});
+   * trie.insert('/users/:id/:name/edit', 'GET', () => {});
+   * 
+   * @param {string} path - The url path to insert
+   * @param {UCaseHttpMethod} method - The http method to insert
+   * @param {HandlerFunction} handler - The handler function to insert
+   * @returns {void}
+   */
+  insert(
+    path: string,
+    method: UCaseHttpMethod,
+    handler: HandlerFunction,
+  ): void {
     if (path[0] !== '/') {
       throw new Error('Path must start with a /');
     }
 
-    method = method.toUpperCase() as HttpMethod;
+    if (!Methods[method]) {
+      throw new Error('Invalid http method - Method not supported');
+    }
+
     const pathChunks = this.splitPath(path);
 
-    
     let currentNode = this.root;
     let currentIndex = 0;
 
@@ -41,7 +70,9 @@ export default class Trie implements RouterTrie {
 
     while (currentIndex < pathChunks.length) {
       const prefix = pathChunks[currentIndex];
-      const child = currentNode.children ? currentNode.children.get(prefix) : undefined;
+      const child = currentNode.children
+        ? currentNode.children.get(prefix)
+        : undefined;
       const isLeaf = currentIndex === pathChunks.length - 1;
 
       // If the child exists and the node is a leaf, throw an error
@@ -49,42 +80,106 @@ export default class Trie implements RouterTrie {
         throw new Error('Path already exists');
       }
 
-      // If the child exists and the node is not a leaf, continue
+      // If the child exists and the node is not a leaf, update the current node
+      // and increment the current index then continue the loop
       if (child && !isLeaf) {
         currentNode = child;
+        currentIndex++;
         continue;
       }
 
-      // Check if the prefix is a param, wildcard, or regex
-      const isParam = prefix.startsWith(':');
+      // Check if the prefix is parameterized, a wildcard, or regex
+      const isParam = prefix[0] === ':';
       const isWildcard = prefix === '*';
       const isRegex = prefix[0] === '/' ? this.isRegex(prefix) : false;
 
       // If the child does not exist, create a new node
-      if (!child) {
-        const newNode = new Node();
-        newNode.prefix = isRegex ? prefix.slice(1, -1) : prefix;
-        newNode.size = !isWildcard && !isParam ? prefix.length : 0;
-        newNode.parent = currentNode;
-        newNode.handler = isLeaf ? handler : null;
-        newNode.isLeaf = isLeaf;
-        newNode.isParam = isParam;
-        newNode.isWildcard = isWildcard;
-        newNode.isRegex = isRegex;
+      const newNode = new Node();
+      newNode.prefix = prefix;
+      newNode.size = !isWildcard && !isParam && !isRegex ? prefix.length : 0;
+      newNode.parent = currentNode;
+      newNode.handler = isLeaf ? handler : null;
+      newNode.isLeaf = isLeaf;
+      newNode.isParam = isParam;
+      newNode.isWildcard = isWildcard;
+      newNode.isRegex = isRegex;
 
-        if (!currentNode.children) {
-          currentNode.children = new Map();
-        }
-
-        currentNode.children.set(prefix, newNode);
+      // If the current node does not have children, create a new map
+      if (!currentNode.children) {
+        currentNode.children = new Map();
       }
 
-  
+      currentNode.children.set(prefix, newNode);
 
-      // Increment the current index
+      // If the node is a leaf, break the loop
+      if (isLeaf) {
+        break;
+      }
+
+      // Update the current node and increment the current index
+      currentNode = newNode;
       currentIndex++;
     }
+
+    // Update the depth of the trie
+    this.depth = Math.max(this.depth, pathChunks.length);
+
+    return;
+  }
+
+  match(path: string, method?: UCaseHttpMethod): RouterNode | undefined {
+    if (path[0] !== '/') {
+      throw new Error('Path must start with a /');
+    }
+
+    // Set default method to 'GET' if no method is provided
+    if (!method) {
+      method = 'GET';
+    }
+
+    // Check if the method is in the trie data structure
+    const methodNode = this.root.children?.get(method);
+    if (!methodNode) {
+      return undefined;
+    }
+
+    let currentNode = methodNode;
+    let currentIndex = 1;
+
     
+
+    while (currentIndex < path.length) {
+      currentIndex++;
+    }
+
+    return currentNode;
+  }
+
+  /**
+   * RouterTrie - Get Depth
+   * ----------------------------------------------------------------------------
+   * Get the depth of the trie.
+   * 
+   * @name getDepth
+   * @description
+   * This method returns the depth of the trie. The depth of the trie is the
+   * length of the longest path in the trie. The time complexity of this method
+   * is O(1).
+   * 
+   * @example
+   * const trie = new Trie();
+   * 
+   * trie.insert('/users/:id', 'GET', () => {});
+   * trie.insert('/users/:id/:name', 'GET', () => {});
+   * trie.insert('/users/:id/:name/edit', 'GET', () => {});
+   * 
+   * console.log(trie.getDepth());
+   * // 4
+   * 
+   * @returns {number} The depth of the trie
+   */
+  getDepth(): number {
+    return this.depth;
   }
 
   /* ============================================================================ */
@@ -95,22 +190,22 @@ export default class Trie implements RouterTrie {
    * Split Path
    * ----------------------------------------------------------------------------
    * Split the path into an array of chunks.
-   * 
+   *
    * @name splitPath
    * @description
    * This method splits the path into an array of chunks. The chunks are split by
-   * the forward slash '/' character. The chunks are returned as an array. The 
+   * the forward slash '/' character. The chunks are returned as an array. The
    * time complixity of this method is O(n) where n is the length of the path.
-   * 
+   *
    * @param {string} path - The path to split
-   * @returns {string[]} - The array of path chunks
-   * 
+   * @returns {string[]} The array of path chunks
+   *
    * @example
    * const path = `/users/:id/:name/(/d+.* /)/ * /edit`;
    * const chunks = splitPath(path);
-   * 
+   *
    * console.log(chunks);
-   * // ['users', ':id', ':name', '/ d+.* /', '*', 'edit']
+   * // ['','users', ':id', ':name', '/ d+.* /', '*', 'edit']
    */
   private splitPath(path: string): string[] {
     // TODO: Add support for trailing slashes
@@ -135,10 +230,10 @@ export default class Trie implements RouterTrie {
       }
 
       // Check if the character is a slash and the first character of the path
-      if (char === '/' && index === 0) {
-        index++;
-        continue;
-      }
+      // if (char === '/' && index === 0) {
+      //   index++;
+      //   continue;
+      // }
 
       // Check if the character is a slash and the parentheses flag is false
       if (char === '/' && !pFlag) {
@@ -165,20 +260,20 @@ export default class Trie implements RouterTrie {
    * Is Regex
    * ----------------------------------------------------------------------------
    * Check if the pattern is a regex pattern.
-   * 
+   *
    * @name isRegex
    * @description
    * This method checks if the pattern is a regex pattern. The pattern is a regex
    * pattern if it starts with a forward slash '/' and ends with a forward slash
-   * and optional flags '/igmysu'. The time complexity of this method is O(n) 
+   * and optional flags '/igmysu'. The time complexity of this method is O(n)
    * where n is the length of the pattern.
-   * 
+   *
    * @param {string} pattern - The pattern to check
-   * @returns {boolean} - Whether the pattern is a regex pattern
-   * 
+   * @returns {boolean} Whether the pattern is a regex pattern
+   *
    * @example
    * const pattern = '/d+.* /';
-   * 
+   *
    * console.log(isRegex(pattern));
    * // true
    */
