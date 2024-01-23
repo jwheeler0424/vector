@@ -1,4 +1,4 @@
-import type { ChildrenMap, RouterNode } from '@/types/node';
+import type { ChildrenMap, RouterNode } from '@/types/trie';
 import type { HandlerFunction } from '@/types/handler';
 
 /**

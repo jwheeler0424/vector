@@ -15,3 +15,9 @@ type RouterNode = {
 };
 
 type ChildrenMap = Map<string, RouterNode>;
+
+type MatchedRoute = {
+  handler: HandlerFunction;
+  matched: string[];
+  route: string[];
+};
