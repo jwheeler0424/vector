@@ -9,7 +9,7 @@ export type RouterTrie = {
   // remove(key: string | string[]): void;
   // contains(key: string | string[]): boolean;
   // startsWith(prefix: string): Promise<Array<string>>;
-  // reset(): void;
+  reset(): void;
   // display(): void;
   // toObject(): Record<string, unknown>
   // toString(): string;
@@ -153,6 +153,31 @@ export default class Trie implements RouterTrie {
     }
 
     return currentNode;
+  }
+
+  /**
+   * RouterTrie - Reset
+   * ----------------------------------------------------------------------------
+   * Reset the trie.
+   * 
+   * @name reset
+   * @description
+   * This method resets the trie. The time complexity of this method is O(1).
+   * 
+   * @example
+   * const trie = new Trie();
+   * 
+   * trie.insert('/users/:id', 'GET', () => {});
+   * trie.insert('/users/:id/:name', 'GET', () => {});
+   * trie.insert('/users/:id/:name/edit', 'GET', () => {});
+   * 
+   * trie.reset();
+   * 
+   * @returns {void}
+   */
+  reset(): void {
+    this.root = new Node();
+    this.depth = 0;
   }
 
   /**
