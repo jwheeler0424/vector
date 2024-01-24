@@ -7,7 +7,7 @@ import { Node } from './Node';
  * RouterTrie
  * ------------------------------------------------------------------------------
  * A router trie is a data structure used to store and retrieve routes. The trie
- * is a tree-like data structure that stores routes as paths. The trie is a
+ * is a tree-like data structure that stores routes as nodes. The trie is a
  * prefix tree, meaning that each node in the trie represents a prefix of the
  * path. The trie is a compact data structure that allows for fast lookups.
  *
@@ -170,114 +170,114 @@ export default class Trie implements RouterTrie {
     return;
   }
 
-  match(path: string, method?: UCaseHttpMethod): MatchedRoute | false {
-    if (path[0] !== '/') {
-      throw new Error('Path must start with a /');
-    }
+  // match(path: string, method?: UCaseHttpMethod): MatchedRoute | false {
+  //   if (path[0] !== '/') {
+  //     throw new Error('Path must start with a /');
+  //   }
 
-    // Set default method to 'GET' if no method is provided
-    if (!method) {
-      method = 'GET';
-    }
+  //   // Set default method to 'GET' if no method is provided
+  //   if (!method) {
+  //     method = 'GET';
+  //   }
 
-    if (!Methods[method]) {
-      throw new Error('Invalid http method - Method not supported');
-    }
+  //   if (!Methods[method]) {
+  //     throw new Error('Invalid http method - Method not supported');
+  //   }
 
-    const pathChunks = this.splitPath(path);
+  //   const pathChunks = this.splitPath(path);
 
-    const matchedRoute: string[] = [];
-    let currentNode = this.root;
-    let currentIndex = 0;
+  //   const matchedRoute: string[] = [];
+  //   let currentNode = this.root;
+  //   let currentIndex = 0;
 
-    pathChunks[0] = method;
+  //   pathChunks[0] = method;
 
-    while (currentIndex < pathChunks.length) {
-      if (!currentNode.children) {
-        return false;
-      }
+  //   while (currentIndex < pathChunks.length) {
+  //     if (!currentNode.children) {
+  //       return false;
+  //     }
 
-      const prefix = pathChunks[currentIndex];
-      const child = currentNode.children.get(prefix);
+  //     const prefix = pathChunks[currentIndex];
+  //     const child = currentNode.children.get(prefix);
 
-      // If the child exists, check if the child is a leaf
-      // If the child is a leaf, return the MatchedRoute object
-      // If the child is not a leaf, update the current node and increment the
-      // current index then continue the loop
-      if (child) {
-        matchedRoute.push(prefix);
+  //     // If the child exists, check if the child is a leaf
+  //     // If the child is a leaf, return the MatchedRoute object
+  //     // If the child is not a leaf, update the current node and increment the
+  //     // current index then continue the loop
+  //     if (child) {
+  //       matchedRoute.push(prefix);
 
-        if (child.isLeaf) {
-          return {
-            handler: child.handler as HandlerFunction,
-            matched: matchedRoute,
-            route: pathChunks,
-          };
-        }
+  //       if (child.isLeaf) {
+  //         return {
+  //           handler: child.handler as HandlerFunction,
+  //           matched: matchedRoute,
+  //           route: pathChunks,
+  //         };
+  //       }
 
-        currentNode = child;
-        currentIndex++;
-        continue;
-      }
+  //       currentNode = child;
+  //       currentIndex++;
+  //       continue;
+  //     }
 
-      // Loop through children to check for parameterized children, regex 
-      // children, and wildcard children
-      for (const [key, value] of currentNode.children) {
-        // Check if the child is parameterized
-        if (value.isParam) {
-          matchedRoute.push(key);
+  //     // Loop through children to check for parameterized children, regex 
+  //     // children, and wildcard children
+  //     for (const [key, value] of currentNode.children) {
+  //       // Check if the child is parameterized
+  //       if (value.isParam) {
+  //         matchedRoute.push(key);
 
-          if (value.isLeaf) {
-            return {
-              handler: value.handler as HandlerFunction,
-              matched: matchedRoute,
-              route: pathChunks,
-            };
-          }
+  //         if (value.isLeaf) {
+  //           return {
+  //             handler: value.handler as HandlerFunction,
+  //             matched: matchedRoute,
+  //             route: pathChunks,
+  //           };
+  //         }
 
-          currentNode = value;
-          currentIndex++;
-          break;
-        }
+  //         currentNode = value;
+  //         currentIndex++;
+  //         break;
+  //       }
 
-        // Check if the child is a regex
-        if (value.isRegex) {
-          matchedRoute.push(key);
+  //       // Check if the child is a regex
+  //       if (value.isRegex) {
+  //         matchedRoute.push(key);
 
-          if (value.isLeaf) {
-            return {
-              handler: value.handler as HandlerFunction,
-              matched: matchedRoute,
-              route: pathChunks,
-            };
-          }
+  //         if (value.isLeaf) {
+  //           return {
+  //             handler: value.handler as HandlerFunction,
+  //             matched: matchedRoute,
+  //             route: pathChunks,
+  //           };
+  //         }
 
-          currentNode = value;
-          currentIndex++;
-          break;
-        }
+  //         currentNode = value;
+  //         currentIndex++;
+  //         break;
+  //       }
 
-        // Check if the child is a wildcard
-        if (value.isWildcard) {
-          matchedRoute.push(key);
+  //       // Check if the child is a wildcard
+  //       if (value.isWildcard) {
+  //         matchedRoute.push(key);
 
-          if (value.isLeaf) {
-            return {
-              handler: value.handler as HandlerFunction,
-              matched: matchedRoute,
-              route: pathChunks,
-            };
-          }
+  //         if (value.isLeaf) {
+  //           return {
+  //             handler: value.handler as HandlerFunction,
+  //             matched: matchedRoute,
+  //             route: pathChunks,
+  //           };
+  //         }
 
-          currentNode = value;
-          currentIndex++;
-          break;
-        }
-      }
-    }
+  //         currentNode = value;
+  //         currentIndex++;
+  //         break;
+  //       }
+  //     }
+  //   }
 
-    return false;
-  }
+  //   return false;
+  // }
 
   /**
    * RouterTrie - Reset
@@ -428,6 +428,6 @@ export default class Trie implements RouterTrie {
    */
   private isRegex(pattern: string): boolean {
     // Regex flags are i, g, m, u, s, and y (ignoreCase, global, multiline, unicode, dotAll, sticky)
-    return pattern.match(/^\/.*\/[igmysu]*$/) !== null;
+    return pattern.match(/^\(\/?.*\/?[igmysu]*\)/) !== null;
   }
 }
