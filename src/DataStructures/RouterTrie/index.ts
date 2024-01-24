@@ -47,7 +47,7 @@ import { Node } from './Node';
 
 export type RouterTrie = {
   insert(path: string, method: UCaseHttpMethod, handler: HandlerFunction): void;
-  match(path: string, method?: UCaseHttpMethod): MatchedRoute | false;
+  // match(path: string, method?: UCaseHttpMethod): MatchedRoute | false;
   // depricated(path: string, method?: UCaseHttpMethod): void;
   // remove(key: string | string[]): void;
   // contains(key: string | string[]): boolean;
@@ -406,27 +406,28 @@ export default class Trie implements RouterTrie {
   }
 
   /**
-   * Is Regex
+   * Is Regular Expression
    * ----------------------------------------------------------------------------
-   * Check if the pattern is a regex pattern.
+   * Check if the pattern is a regular expression pattern.
    *
-   * @name isRegex
+   * @name isRegExp
    * @description
-   * This method checks if the pattern is a regex pattern. The pattern is a regex
-   * pattern if it starts with a forward slash '/' and ends with a forward slash
-   * and optional flags '/igmysu'. The time complexity of this method is O(n)
-   * where n is the length of the pattern.
+   * This method checks if the pattern is a regular expression pattern. The 
+   * pattern is a regular expression pattern if it starts with an optional open 
+   * parentheses '(' or forward slash '/' and ends with an optional closing 
+   * parentheses ')' or forward slash '/. The time complexity of this method is 
+   * O(n) where n is the length of the pattern.
    *
    * @param {string} pattern - The pattern to check
-   * @returns {boolean} Whether the pattern is a regex pattern
+   * @returns {boolean} Whether the pattern is a regular expression pattern
    *
    * @example
-   * const pattern = '/d+.* /';
+   * const pattern = '(/d+.* /)';
    *
-   * console.log(isRegex(pattern));
+   * console.log(isRegExp(pattern));
    * // true
    */
-  private isRegex(pattern: string): boolean {
+  private isRegExp(pattern: string): boolean {
     // Regex flags are i, g, m, u, s, and y (ignoreCase, global, multiline, unicode, dotAll, sticky)
     return pattern.match(/^\(\/?.*\/?[igmysu]*\)/) !== null;
   }
