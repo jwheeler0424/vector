@@ -1,6 +1,6 @@
 import type { HandlerFunction } from '@/types/handler';
 import { type UCaseHttpMethod, Methods } from '@/types/http';
-import type { MatchedRoute, RouterNode } from '@/types/trie';
+import type { Char, MatchedRoute, RouterNode } from '@/types/trie';
 import { Node } from './Node';
 
 /**
@@ -75,9 +75,8 @@ export default class Trie implements RouterTrie {
    *
    * @name insert
    * @description
-   * This method inserts a path into the trie. The path is inserted as an array
-   * of chunks. The chunks are split by the forward slash '/' character. The time
-   * complexity of this method is O(n) where n is the length of the path.
+   * This method inserts a path into the trie. The path is traversed and each 
+   * forward slash '/' starts a new node branch. 
    *
    * @example
    * const trie = new Trie();
@@ -104,68 +103,101 @@ export default class Trie implements RouterTrie {
       throw new Error('Invalid http method - Method not supported');
     }
 
-    const pathChunks = this.splitPath(path);
-
     let currentNode = this.root;
-    let currentIndex = 0;
+    let pathIndex = 0;
+    let pathDepth = 0;
+    let currentChunk = '';
+    let paramName = '';
+    let paramFlag = false;
+    let regexpFlag = false;
+    
 
-    pathChunks[0] = method;
+    while (pathIndex < path.length) {
+      const key = path[pathIndex] as Char;
+      const isLastChar = pathIndex === path.length - 1;
+      const isForwardSlash = key === '/';
+      const isParamDelimiter = key === ':';
+      const isRegexDelimiter = key === '(' || key === ')';
 
-    while (currentIndex < pathChunks.length) {
-      const prefix = pathChunks[currentIndex];
+      currentChunk += key;
+
       const child = currentNode.children
-        ? currentNode.children.get(prefix)
+        ? currentNode.children.get(key)
         : undefined;
-      const isLeaf = currentIndex === pathChunks.length - 1;
 
-      // If the child exists and the node is a leaf, throw an error
-      if (child && isLeaf) {
-        throw new Error('Path already exists');
-      }
-
-      // If the child exists and the node is not a leaf, update the current node
-      // and increment the current index then continue the loop
-      if (child && !isLeaf) {
+      // If the child exists and the key is a forward slash, reset the current chunk,
+      // update the current node and increment the current index then continue the loop
+      if (child && isForwardSlash) {
+        currentChunk = '';
         currentNode = child;
-        currentIndex++;
+        pathIndex++;
         continue;
       }
 
-      // Check if the prefix is parameterized, a wildcard, or regex
-      const isParam = prefix[0] === ':';
-      const isWildcard = prefix === '*';
-      const isRegex = prefix[0] === '/' ? this.isRegex(prefix) : false;
+      if (child && isParamDelimiter) {
+        if (isLastChar) {
+          throw new Error('Invalid path - Parameter delimiter cannot be last character');
+        }
 
-      // If the child does not exist, create a new node
-      const newNode = new Node();
-      newNode.prefix = prefix;
-      newNode.size = !isWildcard && !isParam && !isRegex ? prefix.length : 0;
-      newNode.parent = currentNode;
-      newNode.handler = isLeaf ? handler : null;
-      newNode.isLeaf = isLeaf;
-      newNode.isParam = isParam;
-      newNode.isWildcard = isWildcard;
-      newNode.isRegex = isRegex;
+        const label = child.label;
+        const nextChar = path[pathIndex + 1] as Char;
 
-      // If the current node does not have children, create a new map
-      if (!currentNode.children) {
-        currentNode.children = new Map();
+        if (label?.at(1) !== nextChar) {
+          throw new Error('Invalid path - There are conflicting path parameters');
+        }
+
+        if (nextChar === '/' || nextChar === '(' || nextChar === '-') {
+          throw new Error('Invalid path - Parameter must be given a name');
+        }
+
+        currentNode = child;
+        pathIndex++;
+        continue;
       }
 
-      currentNode.children.set(prefix, newNode);
+      // // If the child exists and the node is not a leaf, update the current node
+      // // and increment the current index then continue the loop
+      // if (child && !isLeaf) {
+      //   currentNode = child;
+      //   currentIndex++;
+      //   continue;
+      // }
 
-      // If the node is a leaf, break the loop
-      if (isLeaf) {
-        break;
-      }
+      // // Check if the prefix is parameterized, a wildcard, or regex
+      // const isParam = prefix[0] === ':';
+      // const isWildcard = prefix === '*';
+      // const isRegex = prefix[0] === '/' ? this.isRegex(prefix) : false;
+
+      // // If the child does not exist, create a new node
+      // const newNode = new Node();
+      // newNode.prefix = prefix;
+      // newNode.size = !isWildcard && !isParam && !isRegex ? prefix.length : 0;
+      // newNode.parent = currentNode;
+      // newNode.handler = isLeaf ? handler : null;
+      // newNode.isLeaf = isLeaf;
+      // newNode.isParam = isParam;
+      // newNode.isWildcard = isWildcard;
+      // newNode.isRegex = isRegex;
+
+      // // If the current node does not have children, create a new map
+      // if (!currentNode.children) {
+      //   currentNode.children = new Map();
+      // }
+
+      // currentNode.children.set(prefix, newNode);
+
+      // // If the node is a leaf, break the loop
+      // if (isLeaf) {
+      //   break;
+      // }
 
       // Update the current node and increment the current index
-      currentNode = newNode;
-      currentIndex++;
+      // currentNode = newNode;
+      pathIndex++;
     }
 
     // Update the depth of the trie
-    this.depth = Math.max(this.depth, pathChunks.length);
+    this.depth = Math.max(this.depth, pathDepth);
 
     return;
   }
@@ -350,11 +382,11 @@ export default class Trie implements RouterTrie {
    * @returns {string[]} The array of path chunks
    *
    * @example
-   * const path = `/users/:id/:name/(/d+.* /)/ * /edit`;
+   * const path = `/users/:id/:name/(d+.*)/ * /edit`;
    * const chunks = splitPath(path);
    *
    * console.log(chunks);
-   * // ['','users', ':id', ':name', '/ d+.* /', '*', 'edit']
+   * // ['','users', ':id', ':name', '(d+.*)', '*', 'edit']
    */
   private splitPath(path: string): string[] {
     // TODO: Add support for trailing slashes

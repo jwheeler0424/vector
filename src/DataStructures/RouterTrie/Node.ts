@@ -30,6 +30,9 @@ import type { HttpMethod } from '@/types/http';
  * 
  * @property {boolean} isLeaf - Whether the node is a leaf / end of a path
  * @property {NodeFlag | null} nodeType - The node type of the node
+ * 
+ * @property {string | null} path - The url path stored in the leaf node
+ * @property {Record<string, string> | null} params - The params stored in the leaf node
  */
 export class Node implements RouterNode {
   /* Router Node data */
@@ -46,6 +49,10 @@ export class Node implements RouterNode {
   isLeaf: boolean;
   nodeType: NodeFlag | null;
 
+  /* Router Node Leaf Data */
+  path: string | null;
+  params: Record<string, string> | null;
+
   constructor() {
     this.key = null;
     this.label = null;
@@ -55,5 +62,7 @@ export class Node implements RouterNode {
     this.isLeaf = false;
     this.nodeType = null;
     this.methods = null;
+    this.path = null;
+    this.params = null;
   }
 }
