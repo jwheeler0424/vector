@@ -413,22 +413,21 @@ export default class Trie implements RouterTrie {
    * @name isRegExp
    * @description
    * This method checks if the pattern is a regular expression pattern. The 
-   * pattern is a regular expression pattern if it starts with an optional open 
-   * parentheses '(' or forward slash '/' and ends with an optional closing 
-   * parentheses ')' or forward slash '/. The time complexity of this method is 
-   * O(n) where n is the length of the pattern.
+   * pattern is a regular expression pattern if it starts with an open 
+   * parentheses '(' and ends with a closing parentheses ')'. The time complexity 
+   * of this method is O(n) where n is the length of the pattern.
    *
    * @param {string} pattern - The pattern to check
    * @returns {boolean} Whether the pattern is a regular expression pattern
    *
    * @example
-   * const pattern = '(/d+.* /)';
+   * const pattern = '(d+.*)';
    *
    * console.log(isRegExp(pattern));
    * // true
    */
   private isRegExp(pattern: string): boolean {
     // Regex flags are i, g, m, u, s, and y (ignoreCase, global, multiline, unicode, dotAll, sticky)
-    return pattern.match(/^\(\/?.*\/?[igmysu]*\)/) !== null;
+    return pattern.match(/^\(.+\)/) !== null;
   }
 }
