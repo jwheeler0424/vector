@@ -40,7 +40,7 @@ import type { HttpMethod } from '@/types/http';
  * @property {NodeFlag | null} nodeType - The node type of the node
  * 
  * @property {string | null} path - The url path stored in the leaf node
- * @property {Record<string, string> | null} params - The params stored in the leaf node
+ * @property {Record<string, { value: string | null, optional: boolean, }> | null} params - The params stored in the leaf node
  */
 export class Node implements RouterNode {
   /* Router Node data */
@@ -59,7 +59,10 @@ export class Node implements RouterNode {
 
   /* Router Node Leaf Data */
   path: string | null;
-  params: Record<string, string | null> | null;
+  params: Record<string, {
+    value: string | null,
+    optional: boolean,
+  }> | null;
 
   constructor(node?: Partial<RouterNode>) {
     this.key = node?.key ?? null;

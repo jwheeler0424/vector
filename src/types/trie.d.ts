@@ -18,11 +18,14 @@ type RouterNode = {
   methods: Record<HttpMethod, HandlerFunction> | null;
 
   path: string | null;
-  params: Record<string, string | null> | null;
+  params: Record<string, {
+    value: string | null,
+    optional: boolean,
+  }> | null;
 };
 
 type MatchedRoute = {
   handler: HandlerFunction;
-  params: Record<string, string>;
+  params: Record<string, string | undefined>;
   route: string;
 };
