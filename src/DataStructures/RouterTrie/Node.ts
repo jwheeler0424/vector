@@ -11,6 +11,14 @@ import type { HttpMethod } from '@/types/http';
  * @example
  * const node = new Node();
  * 
+ * const preset = {
+ *  key: 'a',
+ *  label: 'amber',
+ *  size: 5,
+ * }
+ * 
+ * const node = new Node(preset);
+ * 
  * @description
  * This is the data and pointers for the router trie. Each node stores the key of
  * the node, the label of the node, the size of the label, the parent node, the 
@@ -51,18 +59,18 @@ export class Node implements RouterNode {
 
   /* Router Node Leaf Data */
   path: string | null;
-  params: Record<string, string> | null;
+  params: Record<string, string | null> | null;
 
-  constructor() {
-    this.key = null;
-    this.label = null;
-    this.size = 0;
-    this.parent = null;
-    this.children = null;
-    this.isLeaf = false;
-    this.nodeType = null;
-    this.methods = null;
-    this.path = null;
-    this.params = null;
+  constructor(node?: Partial<RouterNode>) {
+    this.key = node?.key ?? null;
+    this.label = node?.label ?? null;
+    this.size = node?.size ?? 0;
+    this.parent = node?.parent ?? null;
+    this.children = node?.children ?? null;
+    this.isLeaf = node?.isLeaf ?? false;
+    this.nodeType = node?.nodeType ?? null;
+    this.methods = node?.methods ?? null;
+    this.path = node?.path ?? null;
+    this.params = node?.params ?? null;
   }
 }
