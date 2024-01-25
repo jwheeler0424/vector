@@ -28,19 +28,19 @@ import { Node } from './Node';
  * parameterized path does not exist, the trie will try to match a regex path.
  * If the regex path does not exist, the trie will try to match a wildcard path.
  * If the wildcard path does not exist, the trie will return false.
- * 
+ *
  * TODO: Add support for param + regex in same prefix
  *       ex - '/example/:file(^\\d+).png'
- * 
+ *
  *       Add support for multiple params in same prefix
  *       ex - '/example/near/:lat-:lng/radius/:r'
- * 
+ *
  *       Add support for multiple param + multiple regex in same prefix
  *       ex - '/example/at/:hour(^\\d{2})h:minute(^\\d{2})m'
- * 
+ *
  *       Add support for optional params
  *       ex - '/example/posts/:id?'
- * 
+ *
  *       Add support for ':' in path without declaring param, use '::' instead
  *       ex - '/name::verb' should be interpreted as /name:verb
  */
@@ -75,8 +75,8 @@ export default class Trie implements RouterTrie {
    *
    * @name insert
    * @description
-   * This method inserts a path into the trie. The path is traversed and each 
-   * forward slash '/' starts a new node branch. 
+   * This method inserts a path into the trie. The path is traversed and each
+   * forward slash '/' starts a new node branch.
    *
    * @example
    * const trie = new Trie();
@@ -105,21 +105,22 @@ export default class Trie implements RouterTrie {
 
     let currentNode = this.root;
     let pathIndex = 0;
+    let labelIndex = 0;
     let pathDepth = 0;
     let currentChunk = '';
     let paramName = '';
+    let paramOptional = false;
     let paramFlag = false;
     let regexpFlag = false;
-    
 
     while (pathIndex < path.length) {
       const key = path[pathIndex] as Char;
       const isLastChar = pathIndex === path.length - 1;
       const isForwardSlash = key === '/';
       const isParamDelimiter = key === ':';
-      const isRegexDelimiter = key === '(' || key === ')';
+      const isRegExpOpenDelimiter = key === '(';
 
-      currentChunk += key;
+      // currentChunk += key;
 
       const child = currentNode.children
         ? currentNode.children.get(key)
@@ -129,30 +130,159 @@ export default class Trie implements RouterTrie {
       // update the current node and increment the current index then continue the loop
       if (child && isForwardSlash) {
         currentChunk = '';
-        currentNode = child;
+        labelIndex = 0;
+        paramName = '';
+        paramOptional = false;
         pathIndex++;
+        if (!isLastChar) {
+          // TODO: add support for trailing slashes
+          currentNode = child;
+          pathDepth++;
+        }
         continue;
       }
 
+      // If the child exists and the key is a param delimiter, check if the param matches
+      // the node params
       if (child && isParamDelimiter) {
+        // Reset the label index, param name, and param optional
+        labelIndex = 0;
+        paramName = '';
+        paramOptional = false;
+
+        // Check if the param delimiter is the last character
         if (isLastChar) {
-          throw new Error('Invalid path - Parameter delimiter cannot be last character');
+          throw new Error(
+            'Invalid path - Parameter delimiter cannot be last character',
+          );
         }
 
+        // Check if the label is null
         const label = child.label;
-        const nextChar = path[pathIndex + 1] as Char;
-
-        if (label?.at(1) !== nextChar) {
-          throw new Error('Invalid path - There are conflicting path parameters');
+        if (label === null) {
+          throw new Error(
+            'Invalid path - Path node label must be given some value',
+          );
         }
 
-        if (nextChar === '/' || nextChar === '(' || nextChar === '-') {
+        // Check if the param delimiter is followed by a separating delimiter
+        const nextChar: Char | undefined = path[pathIndex + 1] as
+          | Char
+          | undefined;
+        if (
+          !nextChar ||
+          nextChar === '/' ||
+          nextChar === '(' ||
+          nextChar === '-'
+        ) {
           throw new Error('Invalid path - Parameter must be given a name');
         }
 
+        // Check if the param delimiter is followed by another param delimiter
+        if (nextChar === ':') {
+          pathIndex++;
+          continue;
+        }
+
+        // Compare the label and the path to check for param match
+        while (labelIndex < label.length && pathIndex < path.length) {
+          // Check if the param delimiter is followed by a separating delimiter
+          if (labelIndex > 0 && path[pathIndex + labelIndex] === ':') {
+            throw new Error(
+              'Invalid path - There must be a separating delimiter between parameters',
+            );
+          }
+
+          // Check if separating delimiter is reached
+          if (
+            path[pathIndex + labelIndex] === '/' ||
+            path[pathIndex + labelIndex] === '(' ||
+            path[pathIndex + labelIndex] === '-'
+          )
+            break;
+
+          // Check if the parameter is optional and use as separator
+          if (path[pathIndex + labelIndex] === '?') {
+            paramOptional = true;
+            break;
+          }
+
+          // Check if the label and the path mismatch
+          if (label[labelIndex] !== path[pathIndex + labelIndex]) {
+            throw new Error(
+              'Invalid path - There are conflicting path parameters',
+            );
+          }
+
+          if (path[pathIndex + labelIndex] !== ':')
+            paramName += path[pathIndex + labelIndex];
+
+          labelIndex++;
+        }
+
+        // Check if the param match completely matched the label
+        if (
+          (child.params && !child.params[paramName]) ||
+          (child.params &&
+            child.params[paramName] &&
+            child.params[paramName].optional !== paramOptional)
+        ) {
+          throw new Error(
+            'Invalid path - There are conflicting path parameters',
+          );
+        }
+
+        // If the param match completely matched the label, update the current node
+        // and increment the current index then continue the loop
+        pathDepth++;
         currentNode = child;
-        pathIndex++;
-        continue;
+        pathIndex += labelIndex - 1;
+      }
+
+      if (child && isRegExpOpenDelimiter) {
+        // Check if the regexp delimiter is the last character
+        if (isLastChar) {
+          throw new Error(
+            'Invalid path - Regular expression delimiter cannot be last character',
+          );
+        }
+
+        // Check if the label is null
+        const label = child.label;
+        if (label === null) {
+          throw new Error(
+            'Invalid path - Path node label must be given some value',
+          );
+        }
+
+        // Compare the label and the path to check for regexp match
+        while (labelIndex < label.length && pathIndex < path.length) {
+          // Check if closing regexp delimiter is reached
+          if (path[pathIndex + labelIndex] === ')') break;
+
+          // Check if the label and the path mismatch
+          if (label[labelIndex] !== path[pathIndex + labelIndex]) break;
+
+          labelIndex++;
+        }
+
+        // Check if the regexp match completely matched the label
+        if (child.params && !child.params[paramName]) {
+          throw new Error(
+            'Invalid path - There are conflicting path regular expressions',
+          );
+        }
+
+        // If the regexp match completely matched the label, update the current node
+        // and increment the current index then continue the loop
+        pathDepth++;
+        currentNode = child;
+        pathIndex += labelIndex - 1;
+
+        // Reset the label index, param name, and param optional
+        if (labelIndex === label.length) labelIndex = 0;
+        paramName = '';
+        paramOptional = false;
       }
 
       // // If the child exists and the node is not a leaf, update the current node
@@ -252,7 +382,7 @@ export default class Trie implements RouterTrie {
   //       continue;
   //     }
 
-  //     // Loop through children to check for parameterized children, regex 
+  //     // Loop through children to check for parameterized children, regex
   //     // children, and wildcard children
   //     for (const [key, value] of currentNode.children) {
   //       // Check if the child is parameterized
@@ -444,9 +574,9 @@ export default class Trie implements RouterTrie {
    *
    * @name isRegExp
    * @description
-   * This method checks if the pattern is a regular expression pattern. The 
-   * pattern is a regular expression pattern if it starts with an open 
-   * parentheses '(' and ends with a closing parentheses ')'. The time complexity 
+   * This method checks if the pattern is a regular expression pattern. The
+   * pattern is a regular expression pattern if it starts with an open
+   * parentheses '(' and ends with a closing parentheses ')'. The time complexity
    * of this method is O(n) where n is the length of the pattern.
    *
    * @param {string} pattern - The pattern to check
