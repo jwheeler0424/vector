@@ -19,30 +19,19 @@
 // 0 | 1 << 5 | REGEXP          // 32
 // 0 | 1 << 6 | MULTI_REGEXP    // 64
 // 0 | 1 << 7 | WILDCARD        // 128
-type Enumerate<N extends number, Acc extends number[] = []> = Acc['length'] extends N
-  ? Acc[number]
-  : Enumerate<N, [...Acc, Acc['length']]>
 
-type IntRange<F extends number, T extends number> = Exclude<Enumerate<T>, Enumerate<F>>
+export const NodeFlag = {
+  STATIC: 1 << 0, // '/example/users/add'
+  PARAM: 1 << 1, // '/example/users/:id'
+  OPT_PARAM: 1 << 2, // '/example/users/:id?'
+  MULTI_PARAM: 1 << 3, // '/example/near/:lat-:lng/radius/:r'
+  NON_PARAM: 1 << 4, // '/example/users/name::verb' as 'example/users/name:verb'
+  REGEXP: 1 << 5, // '/example/users/(^\\d+)'
+  MULTI_REGEXP: 1 << 6, // '/example/image/:file(^\\d+).:ext(png | jpg | jpeg | gif)'
+  WILDCARD: 1 << 7 // '/example/*'
+} as const;
 
-type NodeFlag = IntRange<0, 256>
-const valu: NodeFlag = 256;
-if (valu) {
-  console.log('yes');
-}
-
-// export const nodeFlag = {
-//   STATIC: 1 << 0, // '/example/users/add'
-//   PARAM: 1 << 1, // '/example/users/:id'
-//   OPT_PARAM: 1 << 2, // '/example/users/:id?'
-//   MULTI_PARAM: 1 << 3, // '/example/near/:lat-:lng/radius/:r'
-//   NON_PARAM: 1 << 4, // '/example/users/name::verb' as 'example/users/name:verb'
-//   REGEXP: 1 << 5, // '/example/users/(^\\d+)'
-//   MULTI_REGEXP: 1 << 6, // '/example/image/:file(^\\d+).:ext(png | jpg | jpeg | gif)'
-//   WILDCARD: 1 << 7 // '/example/*'
-// } as const;
-
-// type NodeFlag = keyof typeof nodeFlag;
+type NodeFlag = keyof typeof NodeFlag;
 
 type Parameter = {
   name: string,
@@ -61,14 +50,15 @@ export const parsePath = (path: string): Array<NodeChunk> => {
   const params: Array<Parameter> = [];
 
   let chunkValue = '';
+  let nodeFlag = 0;
   let param: Parameter | null = null;
   let paramName = '';
   let paramValue = '';
-  let pFlag = false;
-  let pIndex = 0;
-  let pCount = 0;
-  let rFlag = 0;
-  let rCount = 0;
+  let paramFlag = false;
+  let paramIndex = 0;
+  let paramCount = 0;
+  let regexpFlag = false;
+  let regexpCount = 0;
   
   for (let i = 0; i < path.length; i++) {
     const char = path[i];
@@ -76,41 +66,130 @@ export const parsePath = (path: string): Array<NodeChunk> => {
     if (char !== '/') {
       chunkValue += char;
 
-      if (pFlag) {
-        if (!validParamChar(char, pIndex)) {
+      // Check if currently defining parameter
+      if (paramFlag) {
+        // Check if valid parameter character
+        if (!validParamChar(char, paramIndex)) {
           // ':' cannot be separating delimiter when defining parameters
-          // e.g. '/example/:id:' is invalid
+          // e.g. '/example/:id:name' is invalid
           // e.g. '/example/:id::verb' is valid
           // two ':' in a row is valid as it will reduce to one ':' and nonparam
+          // three ':' in a row is invalid as it will flag as param and then two ':' which reduces to one ':'
+          // and a param cannot be defined with a ':' in the name
           if (char === ':' && path[i-1] !== ':') {
-            throw new Error('Invalid path - There must be a separating delimiter between parameters')
+            if (path[i+1] === ':') {
+              param = {
+                name: paramName,
+                value: null,
+                optional: false
+              }
+              params.push(param);
+
+              paramFlag = false;
+              paramName = '';
+              paramIndex = 0;
+              continue;
+            }
+
+            throw new Error('Invalid path - There must be a separating delimiter between parameters');
+
           } else if (char === ':' && path[i-1] === ':') {
+            if (path[i+1] === ':') {
+              throw new Error('Invalid path - A parameter cannot be defined with a ":" in the name');
+            }
+
+            // If node is not already flagged for NON_PARAM, flag it
+            if (!isFlag(nodeFlag, NodeFlag.NON_PARAM)) nodeFlag += NodeFlag.NON_PARAM;
+            paramFlag = false;
+            paramName = '';
+            paramIndex = 0;
+            if (paramCount > 0) {
+              paramCount--;
+            }
+            if (paramCount < 2 && isFlag(nodeFlag, NodeFlag.MULTI_PARAM)) {
+              nodeFlag -= NodeFlag.MULTI_PARAM;
+            }
+            if (paramCount < 1 && isFlag(nodeFlag, NodeFlag.PARAM)) {
+              nodeFlag -= NodeFlag.PARAM;
+            }
             continue;
           }
 
+          // Must be a valid separator while defining parameters
+          if (char !== '?' && char !== '-' && char !== '(') {
+            throw new Error('Invalid path - A parameter name can only contain alphanumeric characters, underscores, and dollar signs');
+          }
+
+          // Create parameter object
           param = {
             name: paramName,
             value: null,
             optional: false
           }
 
+          // Check if optional parameter
           if (char === '?') {
+            if (isFlag(nodeFlag, NodeFlag.OPT_PARAM) || isFlag(nodeFlag, NodeFlag.MULTI_PARAM)) {
+              throw new Error('Invalid path - A parameter cannot be optional and multiparam');
+            }
+            nodeFlag += NodeFlag.OPT_PARAM;
             param.optional = true;
           }
-          
-          
 
-          pFlag = false;
+          // Check if parameter is followed by RegExp
+          if (char === '(') {
+            regexpFlag = true;
+            paramValue += char;
+
+            // Check if regexp is already defined and flag as multi regexp else flag as regexp
+            if (isFlag(nodeFlag, NodeFlag.REGEXP)) {
+              nodeFlag += NodeFlag.MULTI_REGEXP;
+            } else {
+              nodeFlag += NodeFlag.REGEXP;
+            }
+          }
+
+          // Check if multiparam separator and push current param to array and reset param
+          if (char === '-') {
+            if (isFlag(nodeFlag, NodeFlag.OPT_PARAM)) {
+              throw new Error('Invalid path - A parameter cannot be optional and multiparam');
+            }
+            params.push(param);
+            param = null;
+          }
+
+          paramFlag = false;
           paramName = '';
+          paramIndex = 0;
         } else {
           paramName += char;
-          pIndex++;
+          paramIndex++;
         }
+
+        continue;
       }
 
+      // Check if currently defining regexp
+      if (regexpFlag) {}
+
+      // Check for start of parameter definition
       if (char === ':') {
-        pFlag = true;
-        pIndex = 0;
+        paramFlag = true;
+        paramName = '';
+        paramIndex = 0;
+        paramCount ++;
+
+        // Check if optional parameter is already defined
+        if (isFlag(nodeFlag, NodeFlag.OPT_PARAM)) {
+          throw new Error('Invalid path - A parameter cannot be optional and multiparam');
+        }
+
+        // Check if param is already defined and flag as multiparam else flag as param
+        if (isFlag(nodeFlag, NodeFlag.PARAM)) {
+          nodeFlag += NodeFlag.MULTI_PARAM;
+        } else {
+          nodeFlag += NodeFlag.PARAM;
+        }
       }
 
       continue;
@@ -220,10 +299,10 @@ export const parsePath = (path: string): Array<NodeChunk> => {
   return nodeChunks;
 }
 
-export const getType = (chunk: string): NodeFlag => {
-
-}
-
 export const validParamChar = (char: string, index: number): boolean => {
   return index - 1 === 0 ? /[a-zA-Z_$]/.test(char) : /[a-zA-Z0-9_$]/.test(char);
+}
+
+export const isFlag = (byte: number, flag: number): boolean => {
+  return (byte & flag) === flag;
 }
