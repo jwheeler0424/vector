@@ -31,39 +31,43 @@ export const NodeFlag = {
   WILDCARD: 1 << 7 // '/example/*'
 } as const;
 
-type NodeFlag = keyof typeof NodeFlag;
+export type NodeFlag = typeof NodeFlag[keyof typeof NodeFlag];
 
-type Parameter = {
+export type Parameter = {
   name: string,
   value: string | null,
   optional: boolean
 }
 
-type NodeChunk = {
+export type NodeChunk = {
   label: string,
   type: NodeFlag,
-  params: Map<string, Parameter> | null
+  params: Array<Parameter> | null
 }
 
 export const parsePath = (path: string): Array<NodeChunk> => {
   const nodeChunks: Array<NodeChunk> = [];
-  const params: Array<Parameter> = [];
 
+  let params: Array<Parameter> = [];
   let chunkValue = '';
-  let nodeFlag = 0;
+  let nodeType = 0;
   let param: Parameter | null = null;
   let paramName = '';
-  let paramValue = '';
+  let paramValue = null;
   let paramFlag = false;
   let paramIndex = 0;
   let paramCount = 0;
   let regexpFlag = false;
-  let regexpCount = 0;
+  let regexpStack: string[] = [];
   
   for (let i = 0; i < path.length; i++) {
     const char = path[i];
 
     if (char !== '/') {
+      // Check if valid first character when not a '/' or '*'
+      if (i === 0 && char !== '*') {
+        throw new Error('Invalid path - Path must start with "/" or be a wildcard "*"');
+      }
       chunkValue += char;
 
       // Check if currently defining parameter
@@ -76,18 +80,20 @@ export const parsePath = (path: string): Array<NodeChunk> => {
           // two ':' in a row is valid as it will reduce to one ':' and nonparam
           // three ':' in a row is invalid as it will flag as param and then two ':' which reduces to one ':'
           // and a param cannot be defined with a ':' in the name
-          if (char === ':' && path[i-1] !== ':') {
+          if (char === ':' && path[i-1] !== ':' && path[i-1] !== '/') {
             if (path[i+1] === ':') {
               param = {
                 name: paramName,
-                value: null,
+                value: paramValue,
                 optional: false
               }
               params.push(param);
 
               paramFlag = false;
               paramName = '';
+              paramValue = null;
               paramIndex = 0;
+              param = null;
               continue;
             }
 
@@ -99,18 +105,21 @@ export const parsePath = (path: string): Array<NodeChunk> => {
             }
 
             // If node is not already flagged for NON_PARAM, flag it
-            if (!isFlag(nodeFlag, NodeFlag.NON_PARAM)) nodeFlag += NodeFlag.NON_PARAM;
+            if (!isFlag(nodeType, NodeFlag.NON_PARAM)) nodeType += NodeFlag.NON_PARAM;
             paramFlag = false;
             paramName = '';
+            paramValue = null;
             paramIndex = 0;
+            param = null;
+
             if (paramCount > 0) {
               paramCount--;
             }
-            if (paramCount < 2 && isFlag(nodeFlag, NodeFlag.MULTI_PARAM)) {
-              nodeFlag -= NodeFlag.MULTI_PARAM;
+            if (paramCount < 2 && isFlag(nodeType, NodeFlag.MULTI_PARAM)) {
+              nodeType -= NodeFlag.MULTI_PARAM;
             }
-            if (paramCount < 1 && isFlag(nodeFlag, NodeFlag.PARAM)) {
-              nodeFlag -= NodeFlag.PARAM;
+            if (paramCount < 1 && isFlag(nodeType, NodeFlag.PARAM)) {
+              nodeType -= NodeFlag.PARAM;
             }
             continue;
           }
@@ -123,38 +132,36 @@ export const parsePath = (path: string): Array<NodeChunk> => {
           // Create parameter object
           param = {
             name: paramName,
-            value: null,
+            value: paramValue,
             optional: false
           }
 
           // Check if optional parameter
           if (char === '?') {
-            if (isFlag(nodeFlag, NodeFlag.OPT_PARAM) || isFlag(nodeFlag, NodeFlag.MULTI_PARAM)) {
+            if (isFlag(nodeType, NodeFlag.OPT_PARAM) || isFlag(nodeType, NodeFlag.MULTI_PARAM)) {
               throw new Error('Invalid path - A parameter cannot be optional and multiparam');
             }
-            nodeFlag += NodeFlag.OPT_PARAM;
+            nodeType += NodeFlag.OPT_PARAM;
             param.optional = true;
+            paramFlag = false;
+            paramName = '';
+            paramIndex = 0;
+            continue;
           }
 
           // Check if parameter is followed by RegExp
           if (char === '(') {
             regexpFlag = true;
-            paramValue += char;
-
-            // Check if regexp is already defined and flag as multi regexp else flag as regexp
-            if (isFlag(nodeFlag, NodeFlag.REGEXP)) {
-              nodeFlag += NodeFlag.MULTI_REGEXP;
-            } else {
-              nodeFlag += NodeFlag.REGEXP;
-            }
+            regexpStack.push(char);
+            paramValue ? paramValue += char : paramValue = char;
           }
 
           // Check if multiparam separator and push current param to array and reset param
           if (char === '-') {
-            if (isFlag(nodeFlag, NodeFlag.OPT_PARAM)) {
+            if (isFlag(nodeType, NodeFlag.OPT_PARAM)) {
               throw new Error('Invalid path - A parameter cannot be optional and multiparam');
             }
-            params.push(param);
+            if (param) params.push(param);
             param = null;
           }
 
@@ -166,134 +173,258 @@ export const parsePath = (path: string): Array<NodeChunk> => {
           paramIndex++;
         }
 
-        continue;
-      }
-
-      // Check if currently defining regexp
-      if (regexpFlag) {}
-
-      // Check for start of parameter definition
-      if (char === ':') {
-        paramFlag = true;
-        paramName = '';
-        paramIndex = 0;
-        paramCount ++;
-
-        // Check if optional parameter is already defined
-        if (isFlag(nodeFlag, NodeFlag.OPT_PARAM)) {
-          throw new Error('Invalid path - A parameter cannot be optional and multiparam');
-        }
-
-        // Check if param is already defined and flag as multiparam else flag as param
-        if (isFlag(nodeFlag, NodeFlag.PARAM)) {
-          nodeFlag += NodeFlag.MULTI_PARAM;
-        } else {
-          nodeFlag += NodeFlag.PARAM;
-        }
-      }
-
-      continue;
-    }
-    
-    if (char === '/') {
-      // If first character value
-      if (i === 0) {
-        // if path.length === 1, then static root path
-        if (path.length === 1) {
+        // Check if last character and push chunk to array
+        if (i === path.length - 1) {
           nodeChunks.push({
-            label: '',
-            type: 'STATIC',
-            params: null
+            label: chunkValue,
+            type: nodeType,
+            params: params.length > 0 ? params : null
           });
           return nodeChunks;
         }
 
-        // otherwise continue to first chunk
         continue;
       }
 
-      // If no params and no regexps
-      if (paramCount === 0 && regexpCount === 0) {
-        // check if wildcard
-        if (chunkValue === '*') {
-          nodeChunks.push({
-            label: chunkValue,
-            type: 'WILDCARD',
-            params: null
-          });
-          continue;
+      // Check if currently defining regexp
+      if (regexpFlag) {
+        // check if param and param value are defined and add char to param value
+        if (param) paramValue ? paramValue += char : paramValue = char;
+
+        // Check if char is closing delimiter
+        if (char === ')') {
+          // Check if closing delimiter is valid
+          if (regexpStack.length < 1) {
+            throw new Error('Invalid path - RegExp closing delimiter ")" is missing opening delimiter "("');
+          }
+
+          regexpStack.pop();
+
+          if (regexpStack.length === 0) {
+            // If all regexp are closed, reset regexp flag
+            regexpFlag = false;
+            // Check if regexp is already defined and flag as multi regexp else flag as regexp
+            if (isFlag(nodeType, NodeFlag.REGEXP) && !isFlag(nodeType, NodeFlag.MULTI_REGEXP)) {
+              nodeType += NodeFlag.MULTI_REGEXP;
+            } else if (!isFlag(nodeType, NodeFlag.REGEXP)) {
+              nodeType += NodeFlag.REGEXP;
+            }
+          }
         }
 
-        // check if nonparam
-        if (isNonParam) {
-          nodeChunks.push({
-            label: chunkValue,
-            type: 'NONPARAM',
-            params: null
-          });
-          continue;
+        // Check if char is opening delimiter
+        if (char === '(') {
+          regexpStack.push(char);
+          if (i === path.length - 1) {
+            throw new Error('Invalid path - RegExp has no closing delimiter ")"')
+          }
         }
 
-        // otherwise static
-        nodeChunks.push({
-          label: chunkValue,
-          type: 'STATIC',
-          params: null
-        });
+        // Check if last character and push chunk to array
+        if (i === path.length - 1) {
+          // Check if regexp flag is true then reset regexp flag
+          if (regexpFlag || regexpStack.length > 0) {
+            throw new Error('Invalid path - RegExp has no closing delimiter ")"')
+          }
+
+          nodeChunks.push({
+            label: chunkValue,
+            type: nodeType,
+            params: params.length > 0 ? params : null
+          });
+          return nodeChunks;
+        }
+
+        continue;
       }
 
-      // If params and no regexps
-      if (paramCount > 0 && regexpCount === 0) {
-        const paramMap = new Map<string, Parameter>();
-        const params = chunkValue.split('-');
+      // Check for start of parameter definition
+      if (char === ':') {
 
-        // check if optional param
-        if (paramCount === 1 && chunkValue.endsWith('?')) {
-          paramMap.set(chunkValue, {
-            name: chunkValue.slice(1, -1),
-            value: null,
-            optional: true
-          });
-          nodeChunks.push({
-            label: chunkValue,
-            type: 'OPTPARAM',
-            params: paramMap
-          });
-          continue;
+        // Check if param is defined and push to array and reset param
+        if (param) {
+          param.value = paramValue;
+          params.push(param);
+          param = null;
         }
 
-        // check if multiparam
-        if (paramCount > 1) {
-          
-          chunkValue.split('-').forEach((param) => {
-            paramMap.set(param, {
-              name: param.slice(1),
-              value: null,
-              optional: false
-            });
-          });
-          nodeChunks.push({
-            label: chunkValue,
-            type: 'MULTIPARAM',
-            params: paramMap
-          });
-          continue;
+        paramFlag = true;
+        paramName = '';
+        paramValue = null;
+        paramIndex = 0;
+        paramCount ++;
+
+        // Check if optional parameter is already defined
+        if (isFlag(nodeType, NodeFlag.OPT_PARAM)) {
+          throw new Error('Invalid path - A parameter cannot be optional and multiparam');
         }
 
-        // otherwise param
-        nodeChunks.push({
-          label: chunkValue,
-          type: 'PARAM',
-          params: null
-        });
+        // Check if param is already defined and flag as multiparam else flag as param
+        if (isFlag(nodeType, NodeFlag.PARAM) && !isFlag(nodeType, NodeFlag.MULTI_PARAM)) {
+          nodeType += NodeFlag.MULTI_PARAM;
+        } else if (!isFlag(nodeType, NodeFlag.PARAM)) {
+          nodeType += NodeFlag.PARAM;
+        }
+
+        // Check if last character and push chunk to array
+        if (i === path.length - 1) {
+          nodeChunks.push({
+            label: chunkValue,
+            type: nodeType,
+            params: params.length > 0 ? params : null
+          });
+          return nodeChunks;
+        }
+
+        continue;
       }
 
-      // Clear indices and counts
-      chunkIndex = 0;
-      chunkValue = '';
-      paramCount = 0;
-      regexpCount = 0;
+      // Check for start of regexp definition
+      if (char === '(') {
+        regexpFlag = true;
+        regexpStack.push(char);
+        if (param) paramValue ? paramValue += char : paramValue = char;
+
+        // Check if last character
+        if (i === path.length - 1) {
+          throw new Error('Invalid path - RegExp has no closing delimiter ")"')
+        }
+
+        continue;
+      }
+
+      // Check for end of regexp definition
+      if (char === ')') {
+        // Check if closing delimiter is valid
+        if (regexpStack.length < 1) {
+          throw new Error('Invalid path - RegExp closing delimiter ")" is missing opening delimiter "("');
+        }
+
+        regexpStack.pop();
+
+        if (regexpStack.length === 0) {
+          // If all regexp are closed, reset regexp flag
+          regexpFlag = false;
+          // Check if regexp is already defined and flag as multi regexp else flag as regexp
+          if (isFlag(nodeType, NodeFlag.REGEXP) && !isFlag(nodeType, NodeFlag.MULTI_REGEXP)) {
+            nodeType += NodeFlag.MULTI_REGEXP;
+          } else if (!isFlag(nodeType, NodeFlag.REGEXP)) {
+            nodeType += NodeFlag.REGEXP;
+          }
+        }
+
+        // Check if last character and push chunk to array
+        if (i === path.length - 1) {
+          if (regexpStack.length !== 0) {
+            throw new Error('Invalid path - RegExp has no closing delimiter ")"')
+          }
+
+          nodeChunks.push({
+            label: chunkValue,
+            type: nodeType,
+            params: params.length > 0 ? params : null
+          });
+          return nodeChunks;
+        }
+
+        continue;
+      }
+
+      // Check for wildcard
+      if (char === '*') {
+        // Check if wildcard is already defined
+        if (isFlag(nodeType, NodeFlag.WILDCARD)) {
+          throw new Error('Invalid path - A wildcard "*" is already defined');
+        }
+
+        nodeType += NodeFlag.WILDCARD;
+
+        // Check if last character and push chunk to array
+        if (i === path.length - 1) {
+          nodeChunks.push({
+            label: chunkValue,
+            type: nodeType,
+            params: params.length > 0 ? params : null
+          });
+          return nodeChunks;
+        }
+
+        continue;
+      }
+
+      // Check if last character and push chunk to array
+      if (i === path.length - 1) {
+        nodeChunks.push({
+          label: chunkValue,
+          type: nodeType,
+          params: params.length > 0 ? params : null
+        });
+        return nodeChunks;
+      }
+
+      continue;
     }
+
+    // If first character value and path.length === 1, then static root path
+    if (i === 0 && path.length === 1) {
+      nodeType += NodeFlag.STATIC;
+
+      nodeChunks.push({
+        label: '',
+        type: nodeType,
+        params: null
+      });
+
+      return nodeChunks;
+    }
+
+    // Check if param flag is true then create param and push param to array
+    if (paramFlag) {
+      param = {
+        name: paramName,
+        value: paramValue,
+        optional: false
+      }
+      params.push(param);
+      paramFlag = false;
+      paramName = '';
+      paramValue = null;
+      param = null;
+    }
+
+    // Check if param is defined and push to array and reset param
+    if (param) {
+      param.value = paramValue;
+      params.push(param);
+      paramFlag = false;
+      paramName = '';
+      paramValue = null;
+      param = null;
+    }
+
+    // Check if regexp flag is true then reset regexp flag
+    if (regexpFlag || regexpStack.length > 0) {
+      throw new Error('Invalid path - RegExp has no closing delimiter ")"')
+    }
+
+    nodeChunks.push({
+      label: chunkValue,
+      type: nodeType,
+      params: params.length > 0 ? params : null
+    });
+
+    // Reset all chunk values
+    params = [];
+    chunkValue = '';
+    nodeType = 0;
+    param = null;
+    paramName = '';
+    paramValue = null;
+    paramFlag = false;
+    paramIndex = 0;
+    paramCount = 0;
+    regexpFlag = false;
+    regexpStack = [];
   }
 
   return nodeChunks;
@@ -305,4 +436,17 @@ export const validParamChar = (char: string, index: number): boolean => {
 
 export const isFlag = (byte: number, flag: number): boolean => {
   return (byte & flag) === flag;
+}
+
+export const getFlags = (byte: number): Record<keyof typeof NodeFlag, boolean> => {
+  return {
+    STATIC: isFlag(byte, NodeFlag.STATIC),
+    PARAM: isFlag(byte, NodeFlag.PARAM),
+    OPT_PARAM: isFlag(byte, NodeFlag.OPT_PARAM),
+    MULTI_PARAM: isFlag(byte, NodeFlag.MULTI_PARAM),
+    NON_PARAM: isFlag(byte, NodeFlag.NON_PARAM),
+    REGEXP: isFlag(byte, NodeFlag.REGEXP),
+    MULTI_REGEXP: isFlag(byte, NodeFlag.MULTI_REGEXP),
+    WILDCARD: isFlag(byte, NodeFlag.WILDCARD)
+  }
 }
