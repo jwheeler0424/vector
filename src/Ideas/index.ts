@@ -20,6 +20,8 @@
 // 0 | 1 << 6 | MULTI_REGEXP    // 64
 // 0 | 1 << 7 | WILDCARD        // 128
 
+// TODO: create regexp array for regexp(s) with regexp objects
+
 /**
  * EXAMPLES:
  * ------------------------------------------
@@ -64,6 +66,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
   const nodeChunks: Array<NodeChunk> = [];
 
   let params: Array<Parameter> = [];
+  let regexps: Array<RegExp> = [];
+
   let chunkValue = '';
   let nodeType = 0;
   let param: Parameter | null = null;
@@ -397,6 +401,9 @@ export const parsePath = (path: string): Array<NodeChunk> => {
       if (i === path.length - 1) {
         if (nodeType === 0) nodeType += NodeFlag.STATIC;
 
+        // Replace '::' with ':'
+        chunkValue = chunkValue.replace(/::/g, ':');
+
         // Check if param is defined and push to array
         if (param) {
           param.value = paramValue;
@@ -457,6 +464,10 @@ export const parsePath = (path: string): Array<NodeChunk> => {
     }
 
     if (nodeType === 0) nodeType += NodeFlag.STATIC;
+
+    // Replace '::' with ':'
+    chunkValue = chunkValue.replace(/::/g, ':');
+
     nodeChunks.push({
       label: chunkValue,
       type: nodeType,
@@ -482,6 +493,10 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
 export const validParamChar = (char: string, index: number): boolean => {
   return index - 1 === 0 ? /[a-zA-Z_$]/.test(char) : /[a-zA-Z0-9_$]/.test(char);
+}
+
+export const validRegExp = (pattern: string): boolean => {
+  return pattern.match(/^\(.+\)/) !== null;
 }
 
 export const isFlag = (byte: number, flag: number): boolean => {
