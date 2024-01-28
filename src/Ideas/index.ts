@@ -20,15 +20,30 @@
 // 0 | 1 << 6 | MULTI_REGEXP    // 64
 // 0 | 1 << 7 | WILDCARD        // 128
 
+/**
+ * EXAMPLES:
+ * ------------------------------------------
+ * '/example/users/add'
+ * '/example/users/:id'
+ * '/example/users/:id?'
+ * '/example/near/:lat-:lng/radius/:r'
+ * '/example/at/:hour(^\\d{2})h:minute(^\\d{2})m'
+ * '/example/users/name::verb' as 'example/users/name:verb'
+ * '/example/users/(^\\d+)'
+ * '/example/image/:file(^\\d+).:ext(png | jpg | jpeg | gif)'
+ * '/example/:file(^\\d+).png'
+ * '/example/*'
+ */
+
 export const NodeFlag = {
-  STATIC: 1 << 0, // '/example/users/add'
-  PARAM: 1 << 1, // '/example/users/:id'
-  OPT_PARAM: 1 << 2, // '/example/users/:id?'
-  MULTI_PARAM: 1 << 3, // '/example/near/:lat-:lng/radius/:r'
-  NON_PARAM: 1 << 4, // '/example/users/name::verb' as 'example/users/name:verb'
-  REGEXP: 1 << 5, // '/example/users/(^\\d+)'
-  MULTI_REGEXP: 1 << 6, // '/example/image/:file(^\\d+).:ext(png | jpg | jpeg | gif)'
-  WILDCARD: 1 << 7 // '/example/*'
+  STATIC: 1 << 0, // 
+  PARAM: 1 << 1, // 
+  OPT_PARAM: 1 << 2, // 
+  MULTI_PARAM: 1 << 3, // 
+  NON_PARAM: 1 << 4, // 
+  REGEXP: 1 << 5, // 
+  MULTI_REGEXP: 1 << 6, // 
+  WILDCARD: 1 << 7 // 
 } as const;
 
 export type NodeFlag = typeof NodeFlag[keyof typeof NodeFlag];
@@ -146,6 +161,18 @@ export const parsePath = (path: string): Array<NodeChunk> => {
             paramFlag = false;
             paramName = '';
             paramIndex = 0;
+
+            // Check if last character and push chunk to array
+            if (i === path.length - 1) {
+              params.push(param);
+              nodeChunks.push({
+                label: chunkValue,
+                type: nodeType,
+                params: params.length > 0 ? params : null
+              });
+              return nodeChunks;
+            }
+
             continue;
           }
 
@@ -175,6 +202,11 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
         // Check if last character and push chunk to array
         if (i === path.length - 1) {
+          if (paramName) params.push({
+            name: paramName,
+            value: paramValue,
+            optional: false
+          });
           nodeChunks.push({
             label: chunkValue,
             type: nodeType,
@@ -227,6 +259,12 @@ export const parsePath = (path: string): Array<NodeChunk> => {
             throw new Error('Invalid path - RegExp has no closing delimiter ")"')
           }
 
+          // Check if param is defined and push to array
+          if (param) {
+            param.value = paramValue;
+            params.push(param);
+          }
+
           nodeChunks.push({
             label: chunkValue,
             type: nodeType,
@@ -253,6 +291,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
         paramValue = null;
         paramIndex = 0;
         paramCount ++;
+
 
         // Check if optional parameter is already defined
         if (isFlag(nodeType, NodeFlag.OPT_PARAM)) {
@@ -352,8 +391,18 @@ export const parsePath = (path: string): Array<NodeChunk> => {
         continue;
       }
 
+      if (paramValue) paramValue += char;
+
       // Check if last character and push chunk to array
       if (i === path.length - 1) {
+        if (nodeType === 0) nodeType += NodeFlag.STATIC;
+
+        // Check if param is defined and push to array
+        if (param) {
+          param.value = paramValue;
+          params.push(param);
+        }
+
         nodeChunks.push({
           label: chunkValue,
           type: nodeType,
@@ -407,6 +456,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
       throw new Error('Invalid path - RegExp has no closing delimiter ")"')
     }
 
+    if (nodeType === 0) nodeType += NodeFlag.STATIC;
     nodeChunks.push({
       label: chunkValue,
       type: nodeType,
