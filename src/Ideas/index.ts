@@ -21,6 +21,9 @@
 // 0 | 1 << 7 | WILDCARD        // 128
 
 // TODO: create regexp array for regexp(s) with regexp objects
+const exp = '(^\\d+)';
+const regex = new RegExp(exp)
+console.log(regex.test('a'))
 
 /**
  * EXAMPLES:
