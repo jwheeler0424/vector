@@ -1,9 +1,9 @@
 import {describe, expect, test} from '@jest/globals';
-import { parsePath } from "../Ideas";
+import { parsePath } from "../Functions/ParsePath";
 
 describe('ParsePath - Accepted Parsed Result', () => {
   // Testing static path
-  test('     STATIC -> /example/users/add', () => {
+  test('       STATIC -> /example/users/add', () => {
       const path = '/example/users/add';
       const result = parsePath(path);
       expect(result).toEqual([
@@ -31,7 +31,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
   });
 
   // Testing path with parameters
-  test('       PARAM -> /example/users/:id', () => {
+  test('        PARAM -> /example/users/:id', () => {
     const path = '/example/users/:id';
     const result = parsePath(path);
     expect(result).toEqual([
@@ -57,7 +57,8 @@ describe('ParsePath - Accepted Parsed Result', () => {
           {
             name: "id",
             value: null,
-            optional: false
+            optional: false,
+            regexp: null
           }
         ]
       }
@@ -65,7 +66,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
   });
 
   // Testing path with optional parameters
-  test('   OPT_PARAM -> /example/users/:id?', () => {
+  test('    OPT_PARAM -> /example/users/:id?', () => {
     const path = '/example/users/:id?';
     const result = parsePath(path);
     expect(result).toEqual([
@@ -91,7 +92,8 @@ describe('ParsePath - Accepted Parsed Result', () => {
           {
             name: "id",
             value: null,
-            optional: true
+            optional: true,
+            regexp: null
           }
         ]
       }
@@ -99,7 +101,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
   });
 
   // Testing path with multiple parameters
-  test(' MULTI_PARAM -> /example/near/:lat-:lng/radius/:r', () => {
+  test('  MULTI_PARAM -> /example/near/:lat-:lng/radius/:r', () => {
     const path = '/example/near/:lat-:lng/radius/:r';
     const result = parsePath(path);
     expect(result).toEqual([
@@ -125,12 +127,14 @@ describe('ParsePath - Accepted Parsed Result', () => {
           {
             name: "lat",
             value: null,
-            optional: false
+            optional: false,
+            regexp: null
           },
           {
             name: "lng",
             value: null,
-            optional: false
+            optional: false,
+            regexp: null
           }
         ]
       },
@@ -146,7 +150,8 @@ describe('ParsePath - Accepted Parsed Result', () => {
           {
             name: "r",
             value: null,
-            optional: false
+            optional: false,
+            regexp: null
           }
         ]
       }
@@ -154,7 +159,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
   });
 
   // Testing path with non-parameterized '::' path
-  test('   NON_PARAM -> /example/users/profile::add', () => {
+  test('    NON_PARAM -> /example/users/profile::add', () => {
     const path = '/example/users/profile::add';
     const result = parsePath(path);
     expect(result).toEqual([
@@ -182,7 +187,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
   });
 
   // Testing path with regular expression
-  test('      REGEXP -> /example/users/(^\\d+)', () => {
+  test('       REGEXP -> /example/users/(^\\d+)', () => {
     const path = '/example/users/(^\\d+)';
     const result = parsePath(path);
     expect(result).toEqual([
@@ -204,13 +209,20 @@ describe('ParsePath - Accepted Parsed Result', () => {
       {
         label: "(^\\d+)",
         type: 32,
-        params: null
+        params: [
+          {
+            name: "",
+            value: "(^\\d+)",
+            optional: false,
+            regexp: new RegExp("(^\\d+)")
+          }
+        ]
       }
     ])
   });
 
   // Testing path with multiple regular expressions, NO PARAMS
-  test('MULTI_REGEXP -> /example/at/(^\\d{2})h(^\\d{2})m', () => {
+  test(' MULTI_REGEXP -> /example/at/(^\\d{2})h(^\\d{2})m', () => {
     const path = '/example/at/(^\\d{2})h(^\\d{2})m';
     const result = parsePath(path);
     expect(result).toEqual([
@@ -232,13 +244,26 @@ describe('ParsePath - Accepted Parsed Result', () => {
       {
         label: "(^\\d{2})h(^\\d{2})m",
         type: 96,
-        params: null
+        params: [
+          {
+            "name": "",
+            "value": "(^\\d{2})h",
+            "optional": false,
+            "regexp": new RegExp("(^\\d{2})h")
+          },
+          {
+            "name": "",
+            "value": "(^\\d{2})m",
+            "optional": false,
+            "regexp": new RegExp("(^\\d{2})m")
+          }
+        ]
       }
     ])
   });
 
   // Testing path with multiple regular expressions, WITH PARAMS
-  test('MULTI_REGPAR -> /example/image/:file(^\\d+).:ext(png | jpg | jpeg | gif)', () => {
+  test(' MULTI_REGPAR -> /example/image/:file(^\\d+).:ext(png | jpg | jpeg | gif)', () => {
     const path = '/example/image/:file(^\\d+).:ext(png | jpg | jpeg | gif)';
     const result = parsePath(path);
     expect(result).toEqual([
@@ -264,12 +289,14 @@ describe('ParsePath - Accepted Parsed Result', () => {
           {
             "name": "file",
             "value": "(^\\d+).",
-            "optional": false
+            "optional": false,
+            "regexp": new RegExp("(^\\d+).")
           },
           {
             "name": "ext",
             "value": "(png | jpg | jpeg | gif)",
-            "optional": false
+            "optional": false,
+            "regexp": new RegExp("(png | jpg | jpeg | gif)")
           }
         ]
       }
@@ -277,7 +304,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
   });
 
   // Testing path with multiple regular expressions, WITH PARAMS
-  test('MULTI_REGPAR -> /example/at/:hour(^\\d{2})h:minute(^\\d{2})m', () => {
+  test(' MULTI_REGPAR -> /example/at/:hour(^\\d{2})h:minute(^\\d{2})m', () => {
     const path = '/example/at/:hour(^\\d{2})h:minute(^\\d{2})m';
     const result = parsePath(path);
     expect(result).toEqual([
@@ -303,12 +330,14 @@ describe('ParsePath - Accepted Parsed Result', () => {
           {
             "name": "hour",
             "value": "(^\\d{2})h",
-            "optional": false
+            "optional": false,
+            "regexp": new RegExp("(^\\d{2})h")
           },
           {
             "name": "minute",
             "value": "(^\\d{2})m",
-            "optional": false
+            "optional": false,
+            "regexp": new RegExp("(^\\d{2})m")
           }
         ]
       }
@@ -316,7 +345,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
   });
 
   // Testing path with wildcard
-  test('    WILDCARD -> /example/*', () => {
+  test('     WILDCARD -> /example/*', () => {
     const path = '/example/*';
     const result = parsePath(path);
     expect(result).toEqual([

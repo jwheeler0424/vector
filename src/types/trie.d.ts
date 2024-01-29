@@ -3,7 +3,7 @@ import { HttpMethod } from './http';
 import { CharMap, NodeFlag } from '@/Maps';
 
 type Char = keyof typeof CharMap;
-type NodeFlag = keyof typeof NodeFlag;
+type NodeFlag = (typeof NodeFlag)[keyof typeof NodeFlag];
 
 type RouterNode = {
   key: Char | null;
@@ -28,4 +28,17 @@ type MatchedRoute = {
   handler: HandlerFunction;
   params: Record<string, string | undefined>;
   route: string;
+};
+
+type Parameter = {
+  name: string | null;
+  value: string | null;
+  optional: boolean;
+  regexp: RegExp | null;
+};
+
+type NodeChunk = {
+  label: string;
+  type: NodeFlag;
+  params: Array<Parameter> | null;
 };

@@ -1,7 +1,9 @@
-import type { HandlerFunction } from '@/types/handler';
-import { type UCaseHttpMethod, Methods } from '@/types/http';
-import type { Char, MatchedRoute, RouterNode } from '@/types/trie';
+// import type { HandlerFunction } from '@/types/handler';
+// import { type UCaseHttpMethod, Methods } from '@/types/http';
+import type { NodeChunk, Parameter, RouterNode } from '@/types/trie';
 import { Node } from './Node';
+import { isFlag, validParamChar } from '@/helpers';
+import { NodeFlag } from '@/Maps';
 
 /**
  * RouterTrie
@@ -28,25 +30,10 @@ import { Node } from './Node';
  * parameterized path does not exist, the trie will try to match a regex path.
  * If the regex path does not exist, the trie will try to match a wildcard path.
  * If the wildcard path does not exist, the trie will return false.
- *
- * TODO: Add support for param + regex in same prefix
- *       ex - '/example/:file(^\\d+).png'
- *
- *       Add support for multiple params in same prefix
- *       ex - '/example/near/:lat-:lng/radius/:r'
- *
- *       Add support for multiple param + multiple regex in same prefix
- *       ex - '/example/at/:hour(^\\d{2})h:minute(^\\d{2})m'
- *
- *       Add support for optional params
- *       ex - '/example/posts/:id?'
- *
- *       Add support for ':' in path without declaring param, use '::' instead
- *       ex - '/name::verb' should be interpreted as /name:verb
  */
 
 export type RouterTrie = {
-  insert(path: string, method: UCaseHttpMethod, handler: HandlerFunction): void;
+  // insert(path: string, method: UCaseHttpMethod, handler: HandlerFunction): void;
   // match(path: string, method?: UCaseHttpMethod): MatchedRoute | false;
   // depricated(path: string, method?: UCaseHttpMethod): void;
   // remove(key: string | string[]): void;
@@ -90,247 +77,247 @@ export default class Trie implements RouterTrie {
    * @param {HandlerFunction} handler - The handler function to insert
    * @returns {void}
    */
-  insert(
-    path: string,
-    method: UCaseHttpMethod,
-    handler: HandlerFunction,
-  ): void {
-    if (path[0] !== '/') {
-      throw new Error('Path must start with a /');
-    }
+  // insert(
+  //   path: string,
+  //   method: UCaseHttpMethod,
+  //   handler: HandlerFunction,
+  // ): void {
+  //   if (path[0] !== '/') {
+  //     throw new Error('Path must start with a /');
+  //   }
 
-    if (!Methods[method]) {
-      throw new Error('Invalid http method - Method not supported');
-    }
+  //   if (!Methods[method]) {
+  //     throw new Error('Invalid http method - Method not supported');
+  //   }
 
-    let currentNode = this.root;
-    let pathIndex = 0;
-    let labelIndex = 0;
-    let pathDepth = 0;
-    let currentChunk = '';
-    let paramName = '';
-    let paramOptional = false;
-    let paramFlag = false;
-    let regexpFlag = false;
+  //   let currentNode = this.root;
+  //   let pathIndex = 0;
+  //   let labelIndex = 0;
+  //   let pathDepth = 0;
+  //   let currentChunk = '';
+  //   let paramName = '';
+  //   let paramOptional = false;
+  //   let paramFlag = false;
+  //   let regexpFlag = false;
 
-    while (pathIndex < path.length) {
-      const key = path[pathIndex] as Char;
-      const isLastChar = pathIndex === path.length - 1;
-      const isForwardSlash = key === '/';
-      const isParamDelimiter = key === ':';
-      const isRegExpOpenDelimiter = key === '(';
+  //   while (pathIndex < path.length) {
+  //     const key = path[pathIndex] as Char;
+  //     const isLastChar = pathIndex === path.length - 1;
+  //     const isForwardSlash = key === '/';
+  //     const isParamDelimiter = key === ':';
+  //     const isRegExpOpenDelimiter = key === '(';
 
-      // currentChunk += key;
+  //     // currentChunk += key;
 
-      const child = currentNode.children
-        ? currentNode.children.get(key)
-        : undefined;
+  //     const child = currentNode.children
+  //       ? currentNode.children.get(key)
+  //       : undefined;
 
-      // If the child exists and the key is a forward slash, reset the current chunk,
-      // update the current node and increment the current index then continue the loop
-      if (child && isForwardSlash) {
-        currentChunk = '';
-        labelIndex = 0;
-        paramName = '';
-        paramOptional = false;
-        pathIndex++;
-        if (!isLastChar) {
-          // TODO: add support for trailing slashes
-          currentNode = child;
-          pathDepth++;
-        }
-        continue;
-      }
+  //     // If the child exists and the key is a forward slash, reset the current chunk,
+  //     // update the current node and increment the current index then continue the loop
+  //     if (child && isForwardSlash) {
+  //       currentChunk = '';
+  //       labelIndex = 0;
+  //       paramName = '';
+  //       paramOptional = false;
+  //       pathIndex++;
+  //       if (!isLastChar) {
+  //         // TODO: add support for trailing slashes
+  //         currentNode = child;
+  //         pathDepth++;
+  //       }
+  //       continue;
+  //     }
 
-      // If the child exists and the key is a param delimiter, check if the param matches
-      // the node params
-      if (child && isParamDelimiter) {
-        // Reset the label index, param name, and param optional
-        labelIndex = 0;
-        paramName = '';
-        paramOptional = false;
+  //     // If the child exists and the key is a param delimiter, check if the param matches
+  //     // the node params
+  //     if (child && isParamDelimiter) {
+  //       // Reset the label index, param name, and param optional
+  //       labelIndex = 0;
+  //       paramName = '';
+  //       paramOptional = false;
 
-        // Check if the param delimiter is the last character
-        if (isLastChar) {
-          throw new Error(
-            'Invalid path - Parameter delimiter cannot be last character',
-          );
-        }
+  //       // Check if the param delimiter is the last character
+  //       if (isLastChar) {
+  //         throw new Error(
+  //           'Invalid path - Parameter delimiter cannot be last character',
+  //         );
+  //       }
 
-        // Check if the label is null
-        const label = child.label;
-        if (label === null) {
-          throw new Error(
-            'Invalid path - Path node label must be given some value',
-          );
-        }
+  //       // Check if the label is null
+  //       const label = child.label;
+  //       if (label === null) {
+  //         throw new Error(
+  //           'Invalid path - Path node label must be given some value',
+  //         );
+  //       }
 
-        // Check if the param delimiter is followed by a separating delimiter
-        const nextChar: Char | undefined = path[pathIndex + 1] as
-          | Char
-          | undefined;
-        if (
-          !nextChar ||
-          nextChar === '/' ||
-          nextChar === '(' ||
-          nextChar === '-'
-        ) {
-          throw new Error('Invalid path - Parameter must be given a name');
-        }
+  //       // Check if the param delimiter is followed by a separating delimiter
+  //       const nextChar: Char | undefined = path[pathIndex + 1] as
+  //         | Char
+  //         | undefined;
+  //       if (
+  //         !nextChar ||
+  //         nextChar === '/' ||
+  //         nextChar === '(' ||
+  //         nextChar === '-'
+  //       ) {
+  //         throw new Error('Invalid path - Parameter must be given a name');
+  //       }
 
-        // Check if the param delimiter is followed by another param delimiter
-        if (nextChar === ':') {
-          pathIndex++;
-          continue;
-        }
+  //       // Check if the param delimiter is followed by another param delimiter
+  //       if (nextChar === ':') {
+  //         pathIndex++;
+  //         continue;
+  //       }
 
-        // Compare the label and the path to check for param match
-        while (labelIndex < label.length && pathIndex < path.length) {
-          // Check if the param delimiter is followed by a separating delimiter
-          if (labelIndex > 0 && path[pathIndex + labelIndex] === ':') {
-            throw new Error(
-              'Invalid path - There must be a separating delimiter between parameters',
-            );
-          }
+  //       // Compare the label and the path to check for param match
+  //       while (labelIndex < label.length && pathIndex < path.length) {
+  //         // Check if the param delimiter is followed by a separating delimiter
+  //         if (labelIndex > 0 && path[pathIndex + labelIndex] === ':') {
+  //           throw new Error(
+  //             'Invalid path - There must be a separating delimiter between parameters',
+  //           );
+  //         }
 
-          // Check if separating delimiter is reached
-          if (
-            path[pathIndex + labelIndex] === '/' ||
-            path[pathIndex + labelIndex] === '(' ||
-            path[pathIndex + labelIndex] === '-'
-          )
-            break;
+  //         // Check if separating delimiter is reached
+  //         if (
+  //           path[pathIndex + labelIndex] === '/' ||
+  //           path[pathIndex + labelIndex] === '(' ||
+  //           path[pathIndex + labelIndex] === '-'
+  //         )
+  //           break;
 
-          // Check if the parameter is optional and use as separator
-          if (path[pathIndex + labelIndex] === '?') {
-            paramOptional = true;
-            break;
-          }
+  //         // Check if the parameter is optional and use as separator
+  //         if (path[pathIndex + labelIndex] === '?') {
+  //           paramOptional = true;
+  //           break;
+  //         }
 
-          // Check if the label and the path mismatch
-          if (label[labelIndex] !== path[pathIndex + labelIndex]) {
-            throw new Error(
-              'Invalid path - There are conflicting path parameters',
-            );
-          }
+  //         // Check if the label and the path mismatch
+  //         if (label[labelIndex] !== path[pathIndex + labelIndex]) {
+  //           throw new Error(
+  //             'Invalid path - There are conflicting path parameters',
+  //           );
+  //         }
 
-          if (path[pathIndex + labelIndex] !== ':')
-            paramName += path[pathIndex + labelIndex];
+  //         if (path[pathIndex + labelIndex] !== ':')
+  //           paramName += path[pathIndex + labelIndex];
 
-          labelIndex++;
-        }
+  //         labelIndex++;
+  //       }
 
-        // Check if the param match completely matched the label
-        if (
-          (child.params && !child.params[paramName]) ||
-          (child.params &&
-            child.params[paramName] &&
-            child.params[paramName].optional !== paramOptional)
-        ) {
-          throw new Error(
-            'Invalid path - There are conflicting path parameters',
-          );
-        }
+  //       // Check if the param match completely matched the label
+  //       if (
+  //         (child.params && !child.params[paramName]) ||
+  //         (child.params &&
+  //           child.params[paramName] &&
+  //           child.params[paramName].optional !== paramOptional)
+  //       ) {
+  //         throw new Error(
+  //           'Invalid path - There are conflicting path parameters',
+  //         );
+  //       }
 
-        // If the param match completely matched the label, update the current node
-        // and increment the current index then continue the loop
-        pathDepth++;
-        currentNode = child;
-        pathIndex += labelIndex - 1;
-      }
+  //       // If the param match completely matched the label, update the current node
+  //       // and increment the current index then continue the loop
+  //       pathDepth++;
+  //       currentNode = child;
+  //       pathIndex += labelIndex - 1;
+  //     }
 
-      if (child && isRegExpOpenDelimiter) {
-        // Check if the regexp delimiter is the last character
-        if (isLastChar) {
-          throw new Error(
-            'Invalid path - Regular expression delimiter cannot be last character',
-          );
-        }
+  //     if (child && isRegExpOpenDelimiter) {
+  //       // Check if the regexp delimiter is the last character
+  //       if (isLastChar) {
+  //         throw new Error(
+  //           'Invalid path - Regular expression delimiter cannot be last character',
+  //         );
+  //       }
 
-        // Check if the label is null
-        const label = child.label;
-        if (label === null) {
-          throw new Error(
-            'Invalid path - Path node label must be given some value',
-          );
-        }
+  //       // Check if the label is null
+  //       const label = child.label;
+  //       if (label === null) {
+  //         throw new Error(
+  //           'Invalid path - Path node label must be given some value',
+  //         );
+  //       }
 
-        // Compare the label and the path to check for regexp match
-        while (labelIndex < label.length && pathIndex < path.length) {
-          // Check if closing regexp delimiter is reached
-          if (path[pathIndex + labelIndex] === ')') break;
+  //       // Compare the label and the path to check for regexp match
+  //       while (labelIndex < label.length && pathIndex < path.length) {
+  //         // Check if closing regexp delimiter is reached
+  //         if (path[pathIndex + labelIndex] === ')') break;
 
-          // Check if the label and the path mismatch
-          if (label[labelIndex] !== path[pathIndex + labelIndex]) break;
+  //         // Check if the label and the path mismatch
+  //         if (label[labelIndex] !== path[pathIndex + labelIndex]) break;
 
-          labelIndex++;
-        }
+  //         labelIndex++;
+  //       }
 
-        // Check if the regexp match completely matched the label
-        if (child.params && !child.params[paramName]) {
-          throw new Error(
-            'Invalid path - There are conflicting path regular expressions',
-          );
-        }
+  //       // Check if the regexp match completely matched the label
+  //       if (child.params && !child.params[paramName]) {
+  //         throw new Error(
+  //           'Invalid path - There are conflicting path regular expressions',
+  //         );
+  //       }
 
-        // If the regexp match completely matched the label, update the current node
-        // and increment the current index then continue the loop
-        pathDepth++;
-        currentNode = child;
-        pathIndex += labelIndex - 1;
+  //       // If the regexp match completely matched the label, update the current node
+  //       // and increment the current index then continue the loop
+  //       pathDepth++;
+  //       currentNode = child;
+  //       pathIndex += labelIndex - 1;
 
-        // Reset the label index, param name, and param optional
-        if (labelIndex === label.length) labelIndex = 0;
-        paramName = '';
-        paramOptional = false;
-      }
+  //       // Reset the label index, param name, and param optional
+  //       if (labelIndex === label.length) labelIndex = 0;
+  //       paramName = '';
+  //       paramOptional = false;
+  //     }
 
-      // // If the child exists and the node is not a leaf, update the current node
-      // // and increment the current index then continue the loop
-      // if (child && !isLeaf) {
-      //   currentNode = child;
-      //   currentIndex++;
-      //   continue;
-      // }
+  //     // // If the child exists and the node is not a leaf, update the current node
+  //     // // and increment the current index then continue the loop
+  //     // if (child && !isLeaf) {
+  //     //   currentNode = child;
+  //     //   currentIndex++;
+  //     //   continue;
+  //     // }
 
-      // // Check if the prefix is parameterized, a wildcard, or regex
-      // const isParam = prefix[0] === ':';
-      // const isWildcard = prefix === '*';
-      // const isRegex = prefix[0] === '/' ? this.isRegex(prefix) : false;
+  //     // // Check if the prefix is parameterized, a wildcard, or regex
+  //     // const isParam = prefix[0] === ':';
+  //     // const isWildcard = prefix === '*';
+  //     // const isRegex = prefix[0] === '/' ? this.isRegex(prefix) : false;
 
-      // // If the child does not exist, create a new node
-      // const newNode = new Node();
-      // newNode.prefix = prefix;
-      // newNode.size = !isWildcard && !isParam && !isRegex ? prefix.length : 0;
-      // newNode.parent = currentNode;
-      // newNode.handler = isLeaf ? handler : null;
-      // newNode.isLeaf = isLeaf;
-      // newNode.isParam = isParam;
-      // newNode.isWildcard = isWildcard;
-      // newNode.isRegex = isRegex;
+  //     // // If the child does not exist, create a new node
+  //     // const newNode = new Node();
+  //     // newNode.prefix = prefix;
+  //     // newNode.size = !isWildcard && !isParam && !isRegex ? prefix.length : 0;
+  //     // newNode.parent = currentNode;
+  //     // newNode.handler = isLeaf ? handler : null;
+  //     // newNode.isLeaf = isLeaf;
+  //     // newNode.isParam = isParam;
+  //     // newNode.isWildcard = isWildcard;
+  //     // newNode.isRegex = isRegex;
 
-      // // If the current node does not have children, create a new map
-      // if (!currentNode.children) {
-      //   currentNode.children = new Map();
-      // }
+  //     // // If the current node does not have children, create a new map
+  //     // if (!currentNode.children) {
+  //     //   currentNode.children = new Map();
+  //     // }
 
-      // currentNode.children.set(prefix, newNode);
+  //     // currentNode.children.set(prefix, newNode);
 
-      // // If the node is a leaf, break the loop
-      // if (isLeaf) {
-      //   break;
-      // }
+  //     // // If the node is a leaf, break the loop
+  //     // if (isLeaf) {
+  //     //   break;
+  //     // }
 
-      // Update the current node and increment the current index
-      // currentNode = newNode;
-      pathIndex++;
-    }
+  //     // Update the current node and increment the current index
+  //     // currentNode = newNode;
+  //     pathIndex++;
+  //   }
 
-    // Update the depth of the trie
-    this.depth = Math.max(this.depth, pathDepth);
+  //   // Update the depth of the trie
+  //   this.depth = Math.max(this.depth, pathDepth);
 
-    return;
-  }
+  //   return;
+  // }
 
   // match(path: string, method?: UCaseHttpMethod): MatchedRoute | false {
   //   if (path[0] !== '/') {
@@ -498,98 +485,659 @@ export default class Trie implements RouterTrie {
   /* ============================================================================ */
 
   /**
-   * Split Path
+   * Parse Path
    * ----------------------------------------------------------------------------
    * Split the path into an array of chunks.
    *
-   * @name splitPath
+   * @name parsePath
    * @description
    * This method splits the path into an array of chunks. The chunks are split by
    * the forward slash '/' character. The chunks are returned as an array. The
    * time complixity of this method is O(n) where n is the length of the path.
    *
    * @param {string} path - The path to split
-   * @returns {string[]} The array of path chunks
+   * @returns {NodeChunk[]} The array of path chunks
    *
    * @example
-   * const path = `/users/:id/:name/(d+.*)/ * /edit`;
-   * const chunks = splitPath(path);
+   * const path = `/example/at/:hour(^\\d{2})h:minute(^\\d{2})m`;
+   * const chunks = parsePath(path);
    *
    * console.log(chunks);
-   * // ['','users', ':id', ':name', '(d+.*)', '*', 'edit']
+   * // [{
+   * //   "label": "",
+   * //   "type": 1,
+   * //   "params": null
+   * // }, {
+   * //   "label": "example",
+   * //   "type": 1,
+   * //   "params": null
+   * // }, {
+   * //   "label": "at",
+   * //   "type": 1,
+   * //   "params": null
+   * // }, {
+   * //   "label": ":hour(^\\d{2})h:minute(^\\d{2})m",
+   * //   "type": 106,
+   * //   "params": [
+   * //     {
+   * //       "name": "hour",
+   * //       "value": "(^\\d{2})h",
+   * //       "optional": false,
+   * //       "regexp": {}
+   * //     },
+   * //     {
+   * //       "name": "minute",
+   * //       "value": "(^\\d{2})m",
+   * //       "optional": false,
+   * //       "regexp": {}
+   * //     }
+   * //   ]
+   * // }]
    */
-  private splitPath(path: string): string[] {
-    // TODO: Add support for trailing slashes
-    const chunks: Array<string> = [];
-    let index = 0;
-    let chunk = '';
-    // pFlag is a flag for parentheses
-    let pFlag = false;
-
-    while (index < path.length) {
-      const char = path[index];
-
-      // Check if the character is a parenthesis and set flag accordingly
-      if (char === '(') {
-        pFlag = true;
-        index++;
-        continue;
-      } else if (char === ')') {
-        pFlag = false;
-        index++;
+  private parsePath = (path: string): Array<NodeChunk> => {
+    const nodeChunks: Array<NodeChunk> = [];
+  
+    let paramAr: Array<Parameter> = [];
+  
+    let chunkValue = '';
+    let nodeType = 0;
+    let param: Parameter | null = null;
+    let paramName: string | null = null;
+    let paramValue = null;
+    let paramFlag = false;
+    let paramIndex = 0;
+    let paramCount = 0;
+    let regexpFlag = false;
+    let regexpStack: string[] = [];
+  
+    for (let i = 0; i < path.length; i++) {
+      const char = path[i];
+  
+      if (char !== '/') {
+        // Check if valid first character when not a '/' or '*'
+        if (i === 0 && char !== '*') {
+          throw new Error(
+            'Invalid path - Path must start with "/" or be a wildcard "*"',
+          );
+        }
+        chunkValue += char;
+  
+        // Check if currently defining parameter
+        if (paramFlag) {
+          // Check if valid parameter character
+          if (!validParamChar(char, paramIndex)) {
+            // ':' cannot be separating delimiter when defining parameters
+            // e.g. '/example/:id:name' is invalid
+            // e.g. '/example/:id::verb' is valid
+            // two ':' in a row is valid as it will reduce to one ':' and nonparam
+            // three ':' in a row is invalid as it will flag as param and then two ':' which reduces to one ':'
+            // and a param cannot be defined with a ':' in the name
+            if (char === ':' && path[i - 1] !== ':' && path[i - 1] !== '/') {
+              if (path[i + 1] === ':') {
+                // Create RegExp if flagged and there is a value
+                const regexp =
+                  paramValue && isFlag(nodeType, NodeFlag.REGEXP)
+                    ? new RegExp(paramValue)
+                    : null;
+  
+                param = {
+                  name: paramName ?? null,
+                  value: paramValue,
+                  optional: false,
+                  regexp: regexp,
+                };
+                paramAr.push(param);
+  
+                paramFlag = false;
+                paramName = null;
+                paramValue = null;
+                paramIndex = 0;
+                param = null;
+                continue;
+              }
+  
+              throw new Error(
+                'Invalid path - There must be a separating delimiter between parameters',
+              );
+            } else if (char === ':' && path[i - 1] === ':') {
+              if (path[i + 1] === ':') {
+                throw new Error(
+                  'Invalid path - A parameter cannot be defined with a ":" in the name',
+                );
+              }
+  
+              // If node is not already flagged for NON_PARAM, flag it
+              if (!isFlag(nodeType, NodeFlag.NON_PARAM))
+                nodeType += NodeFlag.NON_PARAM;
+  
+              paramFlag = false;
+              paramName = null;
+              paramValue = null;
+              paramIndex = 0;
+              param = null;
+  
+              if (paramCount > 0) {
+                paramCount--;
+              }
+              if (paramCount < 2 && isFlag(nodeType, NodeFlag.MULTI_PARAM)) {
+                nodeType -= NodeFlag.MULTI_PARAM;
+              }
+              if (paramCount < 1 && isFlag(nodeType, NodeFlag.PARAM)) {
+                nodeType -= NodeFlag.PARAM;
+              }
+              continue;
+            }
+  
+            // Must be a valid separator while defining parameters
+            if (char !== '?' && char !== '-' && char !== '(') {
+              throw new Error(
+                'Invalid path - A parameter name can only contain alphanumeric characters, underscores, and dollar signs',
+              );
+            }
+  
+            // Create parameter object
+            param = {
+              name: paramName ?? null,
+              value: paramValue,
+              optional: false,
+              regexp: null,
+            };
+  
+            // Check if optional parameter
+            if (char === '?') {
+              if (
+                isFlag(nodeType, NodeFlag.OPT_PARAM) ||
+                isFlag(nodeType, NodeFlag.MULTI_PARAM)
+              ) {
+                throw new Error(
+                  'Invalid path - A parameter cannot be optional and multiparam',
+                );
+              }
+              nodeType += NodeFlag.OPT_PARAM;
+              param.optional = true;
+              paramFlag = false;
+              paramName = null;
+              paramIndex = 0;
+  
+              // Check if last character and push chunk to array
+              if (i === path.length - 1) {
+                paramAr.push(param);
+                nodeChunks.push({
+                  label: chunkValue,
+                  type: nodeType,
+                  params: paramAr.length > 0 ? paramAr : null,
+                });
+                return nodeChunks;
+              }
+  
+              continue;
+            }
+  
+            // Check if parameter is followed by RegExp
+            if (char === '(') {
+              regexpFlag = true;
+              regexpStack.push(char);
+              paramValue ? (paramValue += char) : (paramValue = char);
+            }
+  
+            // Check if multiparam separator and push current param to array and reset param
+            if (char === '-') {
+              if (isFlag(nodeType, NodeFlag.OPT_PARAM)) {
+                throw new Error(
+                  'Invalid path - A parameter cannot be optional and multiparam',
+                );
+              }
+              // Create RegExp if flagged and there is a value
+              const regexp =
+                paramValue && isFlag(nodeType, NodeFlag.REGEXP)
+                  ? new RegExp(paramValue)
+                  : null;
+  
+              param.regexp = regexp;
+              paramAr.push(param);
+              param = null;
+              paramValue = null;
+            }
+  
+            paramFlag = false;
+            paramName = null;
+            paramIndex = 0;
+          } else {
+            paramName ? (paramName += char) : (paramName = char);
+            paramIndex++;
+          }
+  
+          // Check if last character and push chunk to array
+          if (i === path.length - 1) {
+            // Create RegExp if flagged and there is a value
+            const regexp =
+              paramValue && isFlag(nodeType, NodeFlag.REGEXP)
+                ? new RegExp(paramValue)
+                : null;
+  
+            paramAr.push({
+              name: paramName ?? null,
+              value: paramValue,
+              optional: false,
+              regexp: regexp,
+            });
+  
+            nodeChunks.push({
+              label: chunkValue,
+              type: nodeType,
+              params: paramAr.length > 0 ? paramAr : null,
+            });
+            return nodeChunks;
+          }
+  
+          continue;
+        }
+  
+        // Check if currently defining regexp
+        if (regexpFlag) {
+          // check if param value is defined and add char to param value
+          paramValue ? (paramValue += char) : (paramValue = char);
+  
+          // Check if char is closing delimiter
+          if (char === ')') {
+            // Check if closing delimiter is valid
+            if (regexpStack.length < 1) {
+              throw new Error(
+                'Invalid path - RegExp closing delimiter ")" is missing opening delimiter "("',
+              );
+            }
+  
+            regexpStack.pop();
+  
+            if (regexpStack.length === 0) {
+              // If all regexp are closed, reset regexp flag
+              regexpFlag = false;
+  
+              // Check if regexp is already defined and flag as multi regexp else flag as regexp
+              if (
+                isFlag(nodeType, NodeFlag.REGEXP) &&
+                !isFlag(nodeType, NodeFlag.MULTI_REGEXP)
+              ) {
+                nodeType += NodeFlag.MULTI_REGEXP;
+              } else if (!isFlag(nodeType, NodeFlag.REGEXP)) {
+                nodeType += NodeFlag.REGEXP;
+              }
+            }
+          }
+  
+          // Check if char is opening delimiter
+          if (char === '(') {
+            // Check if last character
+            if (i === path.length - 1) {
+              throw new Error(
+                'Invalid path - RegExp has no closing delimiter ")"',
+              );
+            }
+  
+            regexpStack.push(char);
+          }
+  
+          // Check if last character and push chunk to array
+          if (i === path.length - 1) {
+            // Check if regexp flag is true then reset regexp flag
+            if (regexpFlag || regexpStack.length > 0) {
+              throw new Error(
+                'Invalid path - RegExp has no closing delimiter ")"',
+              );
+            }
+  
+            // Create RegExp if flagged and there is a value
+            const regexp =
+              paramValue && isFlag(nodeType, NodeFlag.REGEXP)
+                ? new RegExp(paramValue)
+                : null;
+  
+            if (paramValue && !param) {
+              // Create parameter object
+              param = {
+                name: paramName ?? null,
+                value: paramValue,
+                optional: false,
+                regexp: regexp,
+              };
+            }
+  
+            // Check if param is defined and push to array
+            if (param) {
+              param.value = paramValue;
+              param.regexp = regexp;
+              paramAr.push(param);
+            }
+  
+            nodeChunks.push({
+              label: chunkValue,
+              type: nodeType,
+              params: paramAr.length > 0 ? paramAr : null,
+            });
+            return nodeChunks;
+          }
+  
+          continue;
+        }
+  
+        // Check for start of parameter definition
+        if (char === ':') {
+          // Create RegExp if flagged and there is a value
+          const regexp =
+            paramValue && isFlag(nodeType, NodeFlag.REGEXP)
+              ? new RegExp(paramValue)
+              : null;
+  
+          if (paramValue && !param) {
+            // Create parameter object
+            param = {
+              name: paramName ?? null,
+              value: paramValue,
+              optional: false,
+              regexp: null,
+            };
+          }
+  
+          // Check if param is defined and push to array and reset param
+          if (param) {
+            param.value = paramValue;
+            param.regexp = regexp;
+            paramAr.push(param);
+            param = null;
+          }
+  
+          paramFlag = true;
+          paramName = null;
+          paramValue = null;
+          paramIndex = 0;
+          paramCount++;
+  
+          // Check if optional parameter is already defined
+          if (isFlag(nodeType, NodeFlag.OPT_PARAM)) {
+            throw new Error(
+              'Invalid path - A parameter cannot be optional and multiparam',
+            );
+          }
+  
+          // Check if param is already defined and flag as multiparam else flag as param
+          if (
+            isFlag(nodeType, NodeFlag.PARAM) &&
+            !isFlag(nodeType, NodeFlag.MULTI_PARAM)
+          ) {
+            nodeType += NodeFlag.MULTI_PARAM;
+          } else if (!isFlag(nodeType, NodeFlag.PARAM)) {
+            nodeType += NodeFlag.PARAM;
+          }
+  
+          // Check if last character and push chunk to array
+          if (i === path.length - 1) {
+            nodeChunks.push({
+              label: chunkValue,
+              type: nodeType,
+              params: paramAr.length > 0 ? paramAr : null,
+            });
+            return nodeChunks;
+          }
+  
+          continue;
+        }
+  
+        // Check for start of regexp definition
+        if (char === '(') {
+          if (regexpStack.length <= 0) {
+            // Create RegExp if flagged and there is a value
+            const regexp =
+              paramValue && isFlag(nodeType, NodeFlag.REGEXP)
+                ? new RegExp(paramValue)
+                : null;
+  
+            if (paramValue && !param) {
+              // Create parameter object
+              param = {
+                name: paramName ?? null,
+                value: paramValue,
+                optional: false,
+                regexp: null,
+              };
+            }
+  
+            // Check if param is defined and push to array and reset param
+            if (param) {
+              param.value = paramValue;
+              param.regexp = regexp;
+              paramAr.push(param);
+              param = null;
+              paramValue = null;
+            }
+          }
+  
+          regexpFlag = true;
+          regexpStack.push(char);
+  
+          paramValue ? (paramValue += char) : (paramValue = char);
+  
+          // Check if last character
+          if (i === path.length - 1) {
+            throw new Error('Invalid path - RegExp has no closing delimiter ")"');
+          }
+  
+          continue;
+        }
+  
+        // Check for end of regexp definition
+        if (char === ')') {
+          // Check if closing delimiter is valid
+          if (regexpStack.length < 1 || !regexpFlag) {
+            throw new Error(
+              'Invalid path - RegExp closing delimiter ")" is missing opening delimiter "("',
+            );
+          }
+  
+          regexpStack.pop();
+          paramValue ? (paramValue += char) : (paramValue = char);
+  
+          if (regexpStack.length === 0) {
+            // If all regexp are closed, reset regexp flag
+            regexpFlag = false;
+            // Check if regexp is already defined and flag as multi regexp else flag as regexp
+            if (
+              isFlag(nodeType, NodeFlag.REGEXP) &&
+              !isFlag(nodeType, NodeFlag.MULTI_REGEXP)
+            ) {
+              nodeType += NodeFlag.MULTI_REGEXP;
+            } else if (!isFlag(nodeType, NodeFlag.REGEXP)) {
+              nodeType += NodeFlag.REGEXP;
+            }
+          }
+  
+          // Check if last character and push chunk to array
+          if (i === path.length - 1) {
+            if (regexpStack.length !== 0) {
+              throw new Error(
+                'Invalid path - RegExp has no closing delimiter ")"',
+              );
+            }
+  
+            // Create RegExp if flagged and there is a value
+            const regexp =
+              paramValue && isFlag(nodeType, NodeFlag.REGEXP)
+                ? new RegExp(paramValue)
+                : null;
+  
+            if (paramValue && !param) {
+              // Create parameter object
+              param = {
+                name: paramName ?? null,
+                value: paramValue,
+                optional: false,
+                regexp: regexp,
+              };
+            }
+  
+            if (param) {
+              param.value = paramValue;
+              param.regexp = regexp;
+              paramAr.push(param);
+            }
+  
+            nodeChunks.push({
+              label: chunkValue,
+              type: nodeType,
+              params: paramAr.length > 0 ? paramAr : null,
+            });
+            return nodeChunks;
+          }
+  
+          continue;
+        }
+  
+        // Check for wildcard
+        if (char === '*') {
+          // Check if wildcard is already defined
+          if (isFlag(nodeType, NodeFlag.WILDCARD)) {
+            throw new Error('Invalid path - A wildcard "*" is already defined');
+          }
+  
+          nodeType += NodeFlag.WILDCARD;
+  
+          // Check if last character and push chunk to array
+          if (i === path.length - 1) {
+            nodeChunks.push({
+              label: chunkValue,
+              type: nodeType,
+              params: paramAr.length > 0 ? paramAr : null,
+            });
+            return nodeChunks;
+          }
+  
+          continue;
+        }
+  
+        if (paramValue) paramValue += char;
+  
+        // Check if last character and push chunk to array
+        if (i === path.length - 1) {
+          if (nodeType === 0) nodeType += NodeFlag.STATIC;
+  
+          // Replace '::' with ':'
+          chunkValue = chunkValue.replace(/::/g, ':');
+  
+          // Create RegExp if flagged and there is a value
+          const regexp =
+            paramValue && isFlag(nodeType, NodeFlag.REGEXP)
+              ? new RegExp(paramValue)
+              : null;
+  
+          if (paramValue && !param) {
+            // Create parameter object
+            param = {
+              name: paramName ?? null,
+              value: paramValue,
+              optional: false,
+              regexp: regexp,
+            };
+          }
+  
+          // Check if param is defined and push to array
+          if (param) {
+            param.value = paramValue;
+            param.regexp = regexp;
+            paramAr.push(param);
+          }
+  
+          nodeChunks.push({
+            label: chunkValue,
+            type: nodeType,
+            params: paramAr.length > 0 ? paramAr : null,
+          });
+          return nodeChunks;
+        }
+  
         continue;
       }
-
-      // Check if the character is a slash and the first character of the path
-      // if (char === '/' && index === 0) {
-      //   index++;
-      //   continue;
-      // }
-
-      // Check if the character is a slash and the parentheses flag is false
-      if (char === '/' && !pFlag) {
-        chunks.push(chunk);
-        chunk = '';
-        index++;
-        continue;
+  
+      // If first character value and path.length === 1, then static root path
+      if (i === 0 && path.length === 1) {
+        nodeType += NodeFlag.STATIC;
+  
+        nodeChunks.push({
+          label: '',
+          type: nodeType,
+          params: null,
+        });
+  
+        return nodeChunks;
       }
-
-      // Add the character to the chunk
-      chunk += char;
-
-      index++;
+  
+      // Check if param flag is true then create param and push param to array
+      if (paramFlag || (paramValue && !param)) {
+        // Create RegExp if flagged and there is a value
+        const regexp =
+          paramValue && isFlag(nodeType, NodeFlag.REGEXP)
+            ? new RegExp(paramValue)
+            : null;
+  
+        param = {
+          name: paramName ?? null,
+          value: paramValue,
+          optional: false,
+          regexp: regexp,
+        };
+  
+        paramAr.push(param);
+        paramFlag = false;
+        paramName = null;
+        paramValue = null;
+        param = null;
+      }
+  
+      // Check if param is defined and push to array and reset param
+      if (param) {
+        // Create RegExp if flagged and there is a value
+        const regexp =
+          paramValue && isFlag(nodeType, NodeFlag.REGEXP)
+            ? new RegExp(paramValue)
+            : null;
+  
+        param.value = paramValue;
+        param.regexp = regexp;
+        paramAr.push(param);
+        paramFlag = false;
+        paramName = null;
+        paramValue = null;
+        param = null;
+      }
+  
+      // Check if regexp flag is true then reset regexp flag
+      if (regexpFlag || regexpStack.length > 0) {
+        throw new Error('Invalid path - RegExp has no closing delimiter ")"');
+      }
+  
+      if (nodeType === 0) nodeType += NodeFlag.STATIC;
+  
+      // Replace '::' with ':'
+      chunkValue = chunkValue.replace(/::/g, ':');
+  
+      nodeChunks.push({
+        label: chunkValue,
+        type: nodeType,
+        params: paramAr.length > 0 ? paramAr : null,
+      });
+  
+      // Reset all chunk values
+      paramAr = [];
+      chunkValue = '';
+      nodeType = 0;
+      param = null;
+      paramName = '';
+      paramValue = null;
+      paramFlag = false;
+      paramIndex = 0;
+      paramCount = 0;
+      regexpFlag = false;
+      regexpStack = [];
     }
-
-    if (chunk.length > 0) {
-      chunks.push(chunk);
-    }
-
-    return chunks;
-  }
-
-  /**
-   * Is Regular Expression
-   * ----------------------------------------------------------------------------
-   * Check if the pattern is a regular expression pattern.
-   *
-   * @name isRegExp
-   * @description
-   * This method checks if the pattern is a regular expression pattern. The
-   * pattern is a regular expression pattern if it starts with an open
-   * parentheses '(' and ends with a closing parentheses ')'. The time complexity
-   * of this method is O(n) where n is the length of the pattern.
-   *
-   * @param {string} pattern - The pattern to check
-   * @returns {boolean} Whether the pattern is a regular expression pattern
-   *
-   * @example
-   * const pattern = '(d+.*)';
-   *
-   * console.log(isRegExp(pattern));
-   * // true
-   */
-  private isRegExp(pattern: string): boolean {
-    // Regex flags are i, g, m, u, s, and y (ignoreCase, global, multiline, unicode, dotAll, sticky)
-    return pattern.match(/^\(.+\)/) !== null;
-  }
+  
+    return nodeChunks;
+  };
 }

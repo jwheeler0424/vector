@@ -1,3 +1,7 @@
+import { NodeFlag } from "../Maps";
+import { isFlag, validParamChar } from "../helpers";
+import type { NodeChunk, Parameter } from "../types/trie";
+
 /**
  * Node Flags
  * ------------------------------------------
@@ -56,31 +60,6 @@
  * '/example/*'
  */
 
-export const NodeFlag = {
-  STATIC: 1 << 0,
-  PARAM: 1 << 1,
-  OPT_PARAM: 1 << 2,
-  MULTI_PARAM: 1 << 3,
-  NON_PARAM: 1 << 4,
-  REGEXP: 1 << 5,
-  MULTI_REGEXP: 1 << 6,
-  WILDCARD: 1 << 7,
-} as const;
-
-export type NodeFlag = (typeof NodeFlag)[keyof typeof NodeFlag];
-
-export type Parameter = {
-  name: string | null;
-  value: string | null;
-  optional: boolean;
-  regexp: RegExp | null;
-};
-
-export type NodeChunk = {
-  label: string;
-  type: NodeFlag;
-  params: Array<Parameter> | null;
-};
 
 export const parsePath = (path: string): Array<NodeChunk> => {
   const nodeChunks: Array<NodeChunk> = [];
@@ -687,31 +666,4 @@ export const parsePath = (path: string): Array<NodeChunk> => {
   }
 
   return nodeChunks;
-};
-
-export const validParamChar = (char: string, index: number): boolean => {
-  return index - 1 === 0 ? /[a-zA-Z_$]/.test(char) : /[a-zA-Z0-9_$]/.test(char);
-};
-
-export const validRegExp = (pattern: string): boolean => {
-  return pattern.match(/^\(.+\)/) !== null;
-};
-
-export const isFlag = (byte: number, flag: number): boolean => {
-  return (byte & flag) === flag;
-};
-
-export const getFlags = (
-  byte: number,
-): Record<keyof typeof NodeFlag, boolean> => {
-  return {
-    STATIC: isFlag(byte, NodeFlag.STATIC),
-    PARAM: isFlag(byte, NodeFlag.PARAM),
-    OPT_PARAM: isFlag(byte, NodeFlag.OPT_PARAM),
-    MULTI_PARAM: isFlag(byte, NodeFlag.MULTI_PARAM),
-    NON_PARAM: isFlag(byte, NodeFlag.NON_PARAM),
-    REGEXP: isFlag(byte, NodeFlag.REGEXP),
-    MULTI_REGEXP: isFlag(byte, NodeFlag.MULTI_REGEXP),
-    WILDCARD: isFlag(byte, NodeFlag.WILDCARD),
-  };
 };
