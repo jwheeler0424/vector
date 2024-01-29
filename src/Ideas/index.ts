@@ -484,13 +484,20 @@ export const parsePath = (path: string): Array<NodeChunk> => {
               ? new RegExp(paramValue)
               : null;
 
-          if (param) {
-            paramAr.push({
+          if (paramValue && !param) {
+            // Create parameter object
+            param = {
               name: paramName ?? null,
               value: paramValue,
               optional: false,
               regexp: regexp,
-            });
+            };
+          }
+
+          if (param) {
+            param.value = paramValue;
+            param.regexp = regexp;
+            paramAr.push(param);
           }
 
           nodeChunks.push({
