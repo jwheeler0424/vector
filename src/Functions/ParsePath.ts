@@ -19,15 +19,15 @@ import type { NodeChunk, Parameter } from '../types/trie';
  *  D        M     M
  * ------------------------------------------
  *  0 | 1 << 0 | STATIC          // 1
- *  0 | 1 << 1 | PARAM           // 2
- *  0 | 1 << 2 | OPT_PARAM       // 4
- *  0 | 1 << 3 | MULTI_PARAM     // 8
- *  0 | 1 << 4 | NON_PARAM       // 16
+ *  0 | 1 << 1 | NON_PARAM       // 2
+ *  0 | 1 << 2 | PARAM           // 4
+ *  0 | 1 << 3 | OPT_PARAM       // 8
+ *  0 | 1 << 4 | MULTI_PARAM     // 16
  *  0 | 1 << 5 | REGEXP          // 32
  *  0 | 1 << 6 | MULTI_REGEXP    // 64
  *  0 | 1 << 7 | WILDCARD        // 128
  *
- * 
+ *
  * ------------------------------------------
  * Regexp Testing
  * ------------------------------------------
@@ -45,7 +45,7 @@ import type { NodeChunk, Parameter } from '../types/trie';
  * })
  *
  * console.log(match?.every(val => val === true))
- * 
+ *
  * ------------------------------------------
  * EXAMPLES:
  * ------------------------------------------
@@ -65,12 +65,12 @@ import type { NodeChunk, Parameter } from '../types/trie';
  * Parse Path
  * ----------------------------------------------------------------------------
  * Split the path into an array of data objects representing the path chunks.
- * 
+ *
  * @name parsePath
- * @description 
+ * @description
  * Split the path into an array of data objects representing the path chunks
- * delimited by '/'. Each chunk is then parsed for parameters and RegExp. 
- * Based on the parsing, the chunk is then flagged with the appropriate 
+ * delimited by '/'. Each chunk is then parsed for parameters and RegExp.
+ * Based on the parsing, the chunk is then flagged with the appropriate
  * NodeFlag which is used to determine the type of node for matching purposes.
  * The label is the chunk value and the params is an array of parameter objects
  * if any are defined. The parameter object contains the name, value, optional
@@ -80,7 +80,7 @@ import type { NodeChunk, Parameter } from '../types/trie';
  *
  * @param {string} path The path to parse
  * @returns {Array<NodeChunk>} An array of data objects representing the path chunks split by '/'
- * 
+ *
  * @example
  * const path = `/example/at/:hour(^\\d{2})h:minute(^\\d{2})m`;
  * const chunks = parsePath(path);
@@ -147,7 +147,9 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
       // Check if wildcard is already defined
       if (wildcardFlag) {
-        throw new InvalidPathError('A wildcard "*" cannot be followed by any characters');
+        throw new InvalidPathError(
+          'A wildcard "*" cannot be followed by any characters',
+        );
       }
       chunkValue += char;
 
@@ -358,9 +360,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
         if (char === '(') {
           // Check if last character
           if (i === path.length - 1) {
-            throw new InvalidPathError(
-              'RegExp has no closing delimiter ")"',
-            );
+            throw new InvalidPathError('RegExp has no closing delimiter ")"');
           }
 
           regexpStack.push(char);
@@ -370,9 +370,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
         if (i === path.length - 1) {
           // Check if regexp flag is true then reset regexp flag
           if (regexpFlag || regexpStack.length > 0) {
-            throw new InvalidPathError(
-              'RegExp has no closing delimiter ")"',
-            );
+            throw new InvalidPathError('RegExp has no closing delimiter ")"');
           }
 
           // Create RegExp if flagged and there is a value
@@ -542,9 +540,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
         // Check if last character and push chunk to array
         if (i === path.length - 1) {
           if (regexpStack.length !== 0) {
-            throw new InvalidPathError(
-              'RegExp has no closing delimiter ")"',
-            );
+            throw new InvalidPathError('RegExp has no closing delimiter ")"');
           }
 
           // Create RegExp if flagged and there is a value
@@ -589,6 +585,13 @@ export const parsePath = (path: string): Array<NodeChunk> => {
           throw new InvalidPathError('A wildcard "*" is already defined');
         }
 
+        // Check if other characters are defined before
+        if (chunkValue.length > 1) {
+          throw new InvalidPathError(
+            'A wildcard "*" cannot follow other characters',
+          );
+        }
+
         nodeType += NodeFlag.WILDCARD;
 
         // Check if last character and push chunk to array
@@ -608,7 +611,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
       // Check if last character and push chunk to array
       if (i === path.length - 1) {
-        if (nodeType === 0 || nodeType === 16) nodeType += NodeFlag.STATIC;
+        if (nodeType === 0 || nodeType === NodeFlag.NON_PARAM)
+          nodeType += NodeFlag.STATIC;
 
         // Replace '::' with ':'
         chunkValue = chunkValue.replace(/::/g, ':');
@@ -634,6 +638,11 @@ export const parsePath = (path: string): Array<NodeChunk> => {
           param.value = paramValue;
           param.regexp = regexp;
           paramAr.push(param);
+        }
+
+        // Check if regexp flag is true then reset regexp flag
+        if (regexpFlag || regexpStack.length > 0) {
+          throw new InvalidPathError('RegExp has no closing delimiter ")"');
         }
 
         nodeChunks.push({
@@ -704,7 +713,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
       throw new InvalidPathError('RegExp has no closing delimiter ")"');
     }
 
-    if (i === path.length - 1 && (nodeType === 0 || nodeType === 16)) nodeType += NodeFlag.STATIC;
+    if (nodeType === 0 || nodeType === NodeFlag.NON_PARAM)
+      nodeType += NodeFlag.STATIC;
 
     // Replace '::' with ':'
     chunkValue = chunkValue.replace(/::/g, ':');
