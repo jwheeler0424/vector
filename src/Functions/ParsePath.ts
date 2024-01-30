@@ -1,8 +1,10 @@
+import { InvalidPathError } from '../Errors';
 import { NodeFlag } from '../Maps';
 import { isFlag, validParamChar } from '../helpers';
 import type { NodeChunk, Parameter } from '../types/trie';
 
 /**
+ * ------------------------------------------
  * Node Flags
  * ------------------------------------------
  *  0  0  0  0  0  0  0  0
@@ -24,9 +26,9 @@ import type { NodeChunk, Parameter } from '../types/trie';
  *  0 | 1 << 5 | REGEXP          // 32
  *  0 | 1 << 6 | MULTI_REGEXP    // 64
  *  0 | 1 << 7 | WILDCARD        // 128
- */
-
-/**
+ *
+ * 
+ * ------------------------------------------
  * Regexp Testing
  * ------------------------------------------
  * let testStr = '08h30m'
@@ -43,9 +45,8 @@ import type { NodeChunk, Parameter } from '../types/trie';
  * })
  *
  * console.log(match?.every(val => val === true))
- */
-
-/**
+ * 
+ * ------------------------------------------
  * EXAMPLES:
  * ------------------------------------------
  * '/example/users/add'
@@ -138,8 +139,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
     if (char !== '/') {
       // Check if valid first character when not a '/' or '*'
       if (i === 0 && char !== '*') {
-        throw new Error(
-          'Invalid path - Path must start with "/" or be a wildcard "*"',
+        throw new InvalidPathError(
+          'Path must start with "/" or be a wildcard "*"',
         );
       }
       chunkValue += char;
@@ -178,13 +179,13 @@ export const parsePath = (path: string): Array<NodeChunk> => {
               continue;
             }
 
-            throw new Error(
-              'Invalid path - There must be a separating delimiter between parameters',
+            throw new InvalidPathError(
+              'There must be a separating delimiter between parameters',
             );
           } else if (char === ':' && path[i - 1] === ':') {
             if (path[i + 1] === ':') {
-              throw new Error(
-                'Invalid path - A parameter cannot be defined with a ":" in the name',
+              throw new InvalidPathError(
+                'A parameter cannot be defined with a ":" in the name',
               );
             }
 
@@ -212,8 +213,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
           // Must be a valid separator while defining parameters
           if (char !== '?' && char !== '-' && char !== '(') {
-            throw new Error(
-              'Invalid path - A parameter name can only contain alphanumeric characters, underscores, and dollar signs',
+            throw new InvalidPathError(
+              'A parameter name can only contain alphanumeric characters, underscores, and dollar signs',
             );
           }
 
@@ -231,8 +232,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
               isFlag(nodeType, NodeFlag.OPT_PARAM) ||
               isFlag(nodeType, NodeFlag.MULTI_PARAM)
             ) {
-              throw new Error(
-                'Invalid path - A parameter cannot be optional and multiparam',
+              throw new InvalidPathError(
+                'A parameter cannot be optional and multiparam',
               );
             }
             nodeType += NodeFlag.OPT_PARAM;
@@ -265,8 +266,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
           // Check if multiparam separator and push current param to array and reset param
           if (char === '-') {
             if (isFlag(nodeType, NodeFlag.OPT_PARAM)) {
-              throw new Error(
-                'Invalid path - A parameter cannot be optional and multiparam',
+              throw new InvalidPathError(
+                'A parameter cannot be optional and multiparam',
               );
             }
             // Create RegExp if flagged and there is a value
@@ -324,8 +325,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
         if (char === ')') {
           // Check if closing delimiter is valid
           if (regexpStack.length < 1) {
-            throw new Error(
-              'Invalid path - RegExp closing delimiter ")" is missing opening delimiter "("',
+            throw new InvalidPathError(
+              'RegExp closing delimiter ")" is missing opening delimiter "("',
             );
           }
 
@@ -351,8 +352,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
         if (char === '(') {
           // Check if last character
           if (i === path.length - 1) {
-            throw new Error(
-              'Invalid path - RegExp has no closing delimiter ")"',
+            throw new InvalidPathError(
+              'RegExp has no closing delimiter ")"',
             );
           }
 
@@ -363,8 +364,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
         if (i === path.length - 1) {
           // Check if regexp flag is true then reset regexp flag
           if (regexpFlag || regexpStack.length > 0) {
-            throw new Error(
-              'Invalid path - RegExp has no closing delimiter ")"',
+            throw new InvalidPathError(
+              'RegExp has no closing delimiter ")"',
             );
           }
 
@@ -436,8 +437,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
         // Check if optional parameter is already defined
         if (isFlag(nodeType, NodeFlag.OPT_PARAM)) {
-          throw new Error(
-            'Invalid path - A parameter cannot be optional and multiparam',
+          throw new InvalidPathError(
+            'A parameter cannot be optional and multiparam',
           );
         }
 
@@ -500,7 +501,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
         // Check if last character
         if (i === path.length - 1) {
-          throw new Error('Invalid path - RegExp has no closing delimiter ")"');
+          throw new InvalidPathError('RegExp has no closing delimiter ")"');
         }
 
         continue;
@@ -510,8 +511,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
       if (char === ')') {
         // Check if closing delimiter is valid
         if (regexpStack.length < 1 || !regexpFlag) {
-          throw new Error(
-            'Invalid path - RegExp closing delimiter ")" is missing opening delimiter "("',
+          throw new InvalidPathError(
+            'RegExp closing delimiter ")" is missing opening delimiter "("',
           );
         }
 
@@ -535,8 +536,8 @@ export const parsePath = (path: string): Array<NodeChunk> => {
         // Check if last character and push chunk to array
         if (i === path.length - 1) {
           if (regexpStack.length !== 0) {
-            throw new Error(
-              'Invalid path - RegExp has no closing delimiter ")"',
+            throw new InvalidPathError(
+              'RegExp has no closing delimiter ")"',
             );
           }
 
@@ -577,7 +578,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
       if (char === '*') {
         // Check if wildcard is already defined
         if (isFlag(nodeType, NodeFlag.WILDCARD)) {
-          throw new Error('Invalid path - A wildcard "*" is already defined');
+          throw new InvalidPathError('A wildcard "*" is already defined');
         }
 
         nodeType += NodeFlag.WILDCARD;
@@ -692,7 +693,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
     // Check if regexp flag is true then reset regexp flag
     if (regexpFlag || regexpStack.length > 0) {
-      throw new Error('Invalid path - RegExp has no closing delimiter ")"');
+      throw new InvalidPathError('RegExp has no closing delimiter ")"');
     }
 
     if (i === path.length - 1 && (nodeType === 0 || nodeType === 16)) nodeType += NodeFlag.STATIC;

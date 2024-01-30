@@ -5,6 +5,7 @@ import { Node } from './Node';
 import type { UCaseHttpMethod } from '@/types/http';
 import type { HandlerFunction } from '@/types/handler';
 import { Methods } from '@/Maps';
+import { InvalidPathError } from '@/Errors';
 
 /**
  * RouterTrie
@@ -84,15 +85,15 @@ export default class Trie implements RouterTrie {
     handler: HandlerFunction,
   ): void {
     if (path[0] !== '/' && path[0] !== '*') {
-      throw new Error("Invalid Path - Path must start with a '/' or be a wildcard '*'");
+      throw new InvalidPathError("Invalid Path - Path must start with a '/' or be a wildcard '*'");
     }
 
     if (!Methods[method]) {
-      throw new Error('Invalid http method - Method not supported');
+      throw new InvalidPathError('Method not supported');
     }
 
     if (!handler) {
-      throw new Error('Invalid handler - Handler not provided');
+      throw new InvalidPathError('Handler not provided');
     }
 
     // let currentNode = this.root;
@@ -108,7 +109,7 @@ export default class Trie implements RouterTrie {
 
   match(path: string, method: UCaseHttpMethod): MatchedRoute | false {
     if (path[0] !== '/') {
-      throw new Error('Path must start with a /');
+      throw new InvalidPathError('Path must start with a /');
     }
 
     // Set default method to 'GET' if no method is provided
@@ -117,7 +118,7 @@ export default class Trie implements RouterTrie {
     }
 
     if (!Methods[method]) {
-      throw new Error('Invalid http method - Method not supported');
+      throw new InvalidPathError('Method not supported');
     }
 
     // const pathChunks = this.splitPath(path);

@@ -6,28 +6,32 @@ type Char = keyof typeof CharMap;
 type NodeFlag = (typeof NodeFlag)[keyof typeof NodeFlag];
 
 type RouterNode = {
-  key: Char | null;
+  /* Router Node data */
   label: string | null;
-  size: number;
   parent: RouterNode | null;
-  children: Map<Char, RouterNode> | null;
 
+  /* Router Node maps */
+  children: Array<RouterNode> | null;
+  methods: Map<HttpMethod, HandlerFunction> | null;
+
+  /* Router Node flags */
+  type: NodeFlag | null;
   isLeaf: boolean;
 
-  nodeType: NodeFlag | null;
-  methods: Record<HttpMethod, HandlerFunction> | null;
-
+  /* Router Node Leaf Data */
   path: string | null;
-  params: Record<string, {
-    value: string | null,
-    optional: boolean,
-  }> | null;
+  params: Array<Parameter> | null;
 };
 
 type MatchedRoute = {
   handler: HandlerFunction;
-  params: Record<string, string | undefined>;
+  params: Array<NamedParameter> | null;
   route: string;
+};
+
+type NamedParameter = {
+  name: string;
+  value: string;
 };
 
 type Parameter = {
