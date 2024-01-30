@@ -599,7 +599,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
       // Check if last character and push chunk to array
       if (i === path.length - 1) {
-        if (nodeType === 0) nodeType += NodeFlag.STATIC;
+        if (nodeType === 0 || nodeType === 16) nodeType += NodeFlag.STATIC;
 
         // Replace '::' with ':'
         chunkValue = chunkValue.replace(/::/g, ':');
@@ -695,7 +695,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
       throw new Error('Invalid path - RegExp has no closing delimiter ")"');
     }
 
-    if (nodeType === 0) nodeType += NodeFlag.STATIC;
+    if (i === path.length - 1 && (nodeType === 0 || nodeType === 16)) nodeType += NodeFlag.STATIC;
 
     // Replace '::' with ':'
     chunkValue = chunkValue.replace(/::/g, ':');

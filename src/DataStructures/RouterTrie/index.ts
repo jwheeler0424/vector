@@ -1,7 +1,10 @@
 // import type { HandlerFunction } from '@/types/handler';
 // import { type UCaseHttpMethod, Methods } from '@/types/http';
-import type { RouterNode } from '@/types/trie';
+import type { MatchedRoute, RouterNode } from '@/types/trie';
 import { Node } from './Node';
+import type { UCaseHttpMethod } from '@/types/http';
+import type { HandlerFunction } from '@/types/handler';
+import { Methods } from '@/Maps';
 
 /**
  * RouterTrie
@@ -31,8 +34,8 @@ import { Node } from './Node';
  */
 
 export type RouterTrie = {
-  // insert(path: string, method: UCaseHttpMethod, handler: HandlerFunction): void;
-  // match(path: string, method?: UCaseHttpMethod): MatchedRoute | false;
+  insert(path: string, method: UCaseHttpMethod, handler: HandlerFunction): void;
+  match(path: string, method: UCaseHttpMethod): MatchedRoute | false;
   // depricated(path: string, method?: UCaseHttpMethod): void;
   // remove(key: string | string[]): void;
   // contains(key: string | string[]): boolean;
@@ -75,356 +78,53 @@ export default class Trie implements RouterTrie {
    * @param {HandlerFunction} handler - The handler function to insert
    * @returns {void}
    */
-  // insert(
-  //   path: string,
-  //   method: UCaseHttpMethod,
-  //   handler: HandlerFunction,
-  // ): void {
-  //   if (path[0] !== '/') {
-  //     throw new Error('Path must start with a /');
-  //   }
+  insert(
+    path: string,
+    method: UCaseHttpMethod,
+    handler: HandlerFunction,
+  ): void {
+    if (path[0] !== '/' && path[0] !== '*') {
+      throw new Error("Invalid Path - Path must start with a '/' or be a wildcard '*'");
+    }
 
-  //   if (!Methods[method]) {
-  //     throw new Error('Invalid http method - Method not supported');
-  //   }
+    if (!Methods[method]) {
+      throw new Error('Invalid http method - Method not supported');
+    }
 
-  //   let currentNode = this.root;
-  //   let pathIndex = 0;
-  //   let labelIndex = 0;
-  //   let pathDepth = 0;
-  //   let currentChunk = '';
-  //   let paramName = '';
-  //   let paramOptional = false;
-  //   let paramFlag = false;
-  //   let regexpFlag = false;
+    if (!handler) {
+      throw new Error('Invalid handler - Handler not provided');
+    }
 
-  //   while (pathIndex < path.length) {
-  //     const key = path[pathIndex] as Char;
-  //     const isLastChar = pathIndex === path.length - 1;
-  //     const isForwardSlash = key === '/';
-  //     const isParamDelimiter = key === ':';
-  //     const isRegExpOpenDelimiter = key === '(';
+    // let currentNode = this.root;
+    // let pathIndex = 0;
+    // let labelIndex = 0;
+    // let pathDepth = 0;
 
-  //     // currentChunk += key;
+    // // Update the depth of the trie
+    // this.depth = Math.max(this.depth, pathDepth);
 
-  //     const child = currentNode.children
-  //       ? currentNode.children.get(key)
-  //       : undefined;
+    return;
+  }
 
-  //     // If the child exists and the key is a forward slash, reset the current chunk,
-  //     // update the current node and increment the current index then continue the loop
-  //     if (child && isForwardSlash) {
-  //       currentChunk = '';
-  //       labelIndex = 0;
-  //       paramName = '';
-  //       paramOptional = false;
-  //       pathIndex++;
-  //       if (!isLastChar) {
-  //         // TODO: add support for trailing slashes
-  //         currentNode = child;
-  //         pathDepth++;
-  //       }
-  //       continue;
-  //     }
+  match(path: string, method: UCaseHttpMethod): MatchedRoute | false {
+    if (path[0] !== '/') {
+      throw new Error('Path must start with a /');
+    }
 
-  //     // If the child exists and the key is a param delimiter, check if the param matches
-  //     // the node params
-  //     if (child && isParamDelimiter) {
-  //       // Reset the label index, param name, and param optional
-  //       labelIndex = 0;
-  //       paramName = '';
-  //       paramOptional = false;
+    // Set default method to 'GET' if no method is provided
+    if (!method) {
+      method = 'GET';
+    }
 
-  //       // Check if the param delimiter is the last character
-  //       if (isLastChar) {
-  //         throw new Error(
-  //           'Invalid path - Parameter delimiter cannot be last character',
-  //         );
-  //       }
+    if (!Methods[method]) {
+      throw new Error('Invalid http method - Method not supported');
+    }
 
-  //       // Check if the label is null
-  //       const label = child.label;
-  //       if (label === null) {
-  //         throw new Error(
-  //           'Invalid path - Path node label must be given some value',
-  //         );
-  //       }
+    // const pathChunks = this.splitPath(path);
 
-  //       // Check if the param delimiter is followed by a separating delimiter
-  //       const nextChar: Char | undefined = path[pathIndex + 1] as
-  //         | Char
-  //         | undefined;
-  //       if (
-  //         !nextChar ||
-  //         nextChar === '/' ||
-  //         nextChar === '(' ||
-  //         nextChar === '-'
-  //       ) {
-  //         throw new Error('Invalid path - Parameter must be given a name');
-  //       }
-
-  //       // Check if the param delimiter is followed by another param delimiter
-  //       if (nextChar === ':') {
-  //         pathIndex++;
-  //         continue;
-  //       }
-
-  //       // Compare the label and the path to check for param match
-  //       while (labelIndex < label.length && pathIndex < path.length) {
-  //         // Check if the param delimiter is followed by a separating delimiter
-  //         if (labelIndex > 0 && path[pathIndex + labelIndex] === ':') {
-  //           throw new Error(
-  //             'Invalid path - There must be a separating delimiter between parameters',
-  //           );
-  //         }
-
-  //         // Check if separating delimiter is reached
-  //         if (
-  //           path[pathIndex + labelIndex] === '/' ||
-  //           path[pathIndex + labelIndex] === '(' ||
-  //           path[pathIndex + labelIndex] === '-'
-  //         )
-  //           break;
-
-  //         // Check if the parameter is optional and use as separator
-  //         if (path[pathIndex + labelIndex] === '?') {
-  //           paramOptional = true;
-  //           break;
-  //         }
-
-  //         // Check if the label and the path mismatch
-  //         if (label[labelIndex] !== path[pathIndex + labelIndex]) {
-  //           throw new Error(
-  //             'Invalid path - There are conflicting path parameters',
-  //           );
-  //         }
-
-  //         if (path[pathIndex + labelIndex] !== ':')
-  //           paramName += path[pathIndex + labelIndex];
-
-  //         labelIndex++;
-  //       }
-
-  //       // Check if the param match completely matched the label
-  //       if (
-  //         (child.params && !child.params[paramName]) ||
-  //         (child.params &&
-  //           child.params[paramName] &&
-  //           child.params[paramName].optional !== paramOptional)
-  //       ) {
-  //         throw new Error(
-  //           'Invalid path - There are conflicting path parameters',
-  //         );
-  //       }
-
-  //       // If the param match completely matched the label, update the current node
-  //       // and increment the current index then continue the loop
-  //       pathDepth++;
-  //       currentNode = child;
-  //       pathIndex += labelIndex - 1;
-  //     }
-
-  //     if (child && isRegExpOpenDelimiter) {
-  //       // Check if the regexp delimiter is the last character
-  //       if (isLastChar) {
-  //         throw new Error(
-  //           'Invalid path - Regular expression delimiter cannot be last character',
-  //         );
-  //       }
-
-  //       // Check if the label is null
-  //       const label = child.label;
-  //       if (label === null) {
-  //         throw new Error(
-  //           'Invalid path - Path node label must be given some value',
-  //         );
-  //       }
-
-  //       // Compare the label and the path to check for regexp match
-  //       while (labelIndex < label.length && pathIndex < path.length) {
-  //         // Check if closing regexp delimiter is reached
-  //         if (path[pathIndex + labelIndex] === ')') break;
-
-  //         // Check if the label and the path mismatch
-  //         if (label[labelIndex] !== path[pathIndex + labelIndex]) break;
-
-  //         labelIndex++;
-  //       }
-
-  //       // Check if the regexp match completely matched the label
-  //       if (child.params && !child.params[paramName]) {
-  //         throw new Error(
-  //           'Invalid path - There are conflicting path regular expressions',
-  //         );
-  //       }
-
-  //       // If the regexp match completely matched the label, update the current node
-  //       // and increment the current index then continue the loop
-  //       pathDepth++;
-  //       currentNode = child;
-  //       pathIndex += labelIndex - 1;
-
-  //       // Reset the label index, param name, and param optional
-  //       if (labelIndex === label.length) labelIndex = 0;
-  //       paramName = '';
-  //       paramOptional = false;
-  //     }
-
-  //     // // If the child exists and the node is not a leaf, update the current node
-  //     // // and increment the current index then continue the loop
-  //     // if (child && !isLeaf) {
-  //     //   currentNode = child;
-  //     //   currentIndex++;
-  //     //   continue;
-  //     // }
-
-  //     // // Check if the prefix is parameterized, a wildcard, or regex
-  //     // const isParam = prefix[0] === ':';
-  //     // const isWildcard = prefix === '*';
-  //     // const isRegex = prefix[0] === '/' ? this.isRegex(prefix) : false;
-
-  //     // // If the child does not exist, create a new node
-  //     // const newNode = new Node();
-  //     // newNode.prefix = prefix;
-  //     // newNode.size = !isWildcard && !isParam && !isRegex ? prefix.length : 0;
-  //     // newNode.parent = currentNode;
-  //     // newNode.handler = isLeaf ? handler : null;
-  //     // newNode.isLeaf = isLeaf;
-  //     // newNode.isParam = isParam;
-  //     // newNode.isWildcard = isWildcard;
-  //     // newNode.isRegex = isRegex;
-
-  //     // // If the current node does not have children, create a new map
-  //     // if (!currentNode.children) {
-  //     //   currentNode.children = new Map();
-  //     // }
-
-  //     // currentNode.children.set(prefix, newNode);
-
-  //     // // If the node is a leaf, break the loop
-  //     // if (isLeaf) {
-  //     //   break;
-  //     // }
-
-  //     // Update the current node and increment the current index
-  //     // currentNode = newNode;
-  //     pathIndex++;
-  //   }
-
-  //   // Update the depth of the trie
-  //   this.depth = Math.max(this.depth, pathDepth);
-
-  //   return;
-  // }
-
-  // match(path: string, method?: UCaseHttpMethod): MatchedRoute | false {
-  //   if (path[0] !== '/') {
-  //     throw new Error('Path must start with a /');
-  //   }
-
-  //   // Set default method to 'GET' if no method is provided
-  //   if (!method) {
-  //     method = 'GET';
-  //   }
-
-  //   if (!Methods[method]) {
-  //     throw new Error('Invalid http method - Method not supported');
-  //   }
-
-  //   const pathChunks = this.splitPath(path);
-
-  //   const matchedRoute: string[] = [];
-  //   let currentNode = this.root;
-  //   let currentIndex = 0;
-
-  //   pathChunks[0] = method;
-
-  //   while (currentIndex < pathChunks.length) {
-  //     if (!currentNode.children) {
-  //       return false;
-  //     }
-
-  //     const prefix = pathChunks[currentIndex];
-  //     const child = currentNode.children.get(prefix);
-
-  //     // If the child exists, check if the child is a leaf
-  //     // If the child is a leaf, return the MatchedRoute object
-  //     // If the child is not a leaf, update the current node and increment the
-  //     // current index then continue the loop
-  //     if (child) {
-  //       matchedRoute.push(prefix);
-
-  //       if (child.isLeaf) {
-  //         return {
-  //           handler: child.handler as HandlerFunction,
-  //           matched: matchedRoute,
-  //           route: pathChunks,
-  //         };
-  //       }
-
-  //       currentNode = child;
-  //       currentIndex++;
-  //       continue;
-  //     }
-
-  //     // Loop through children to check for parameterized children, regex
-  //     // children, and wildcard children
-  //     for (const [key, value] of currentNode.children) {
-  //       // Check if the child is parameterized
-  //       if (value.isParam) {
-  //         matchedRoute.push(key);
-
-  //         if (value.isLeaf) {
-  //           return {
-  //             handler: value.handler as HandlerFunction,
-  //             matched: matchedRoute,
-  //             route: pathChunks,
-  //           };
-  //         }
-
-  //         currentNode = value;
-  //         currentIndex++;
-  //         break;
-  //       }
-
-  //       // Check if the child is a regex
-  //       if (value.isRegex) {
-  //         matchedRoute.push(key);
-
-  //         if (value.isLeaf) {
-  //           return {
-  //             handler: value.handler as HandlerFunction,
-  //             matched: matchedRoute,
-  //             route: pathChunks,
-  //           };
-  //         }
-
-  //         currentNode = value;
-  //         currentIndex++;
-  //         break;
-  //       }
-
-  //       // Check if the child is a wildcard
-  //       if (value.isWildcard) {
-  //         matchedRoute.push(key);
-
-  //         if (value.isLeaf) {
-  //           return {
-  //             handler: value.handler as HandlerFunction,
-  //             matched: matchedRoute,
-  //             route: pathChunks,
-  //           };
-  //         }
-
-  //         currentNode = value;
-  //         currentIndex++;
-  //         break;
-  //       }
-  //     }
-  //   }
-
-  //   return false;
-  // }
+  
+    return false;
+  }
 
   /**
    * RouterTrie - Reset
