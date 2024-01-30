@@ -1,6 +1,6 @@
-import { NodeFlag } from "../Maps";
-import { isFlag, validParamChar } from "../helpers";
-import type { NodeChunk, Parameter } from "../types/trie";
+import { NodeFlag } from '../Maps';
+import { isFlag, validParamChar } from '../helpers';
+import type { NodeChunk, Parameter } from '../types/trie';
 
 /**
  * Node Flags
@@ -38,10 +38,10 @@ import type { NodeChunk, Parameter } from "../types/trie";
  *     testStr = testStr.substring(found[0].length);
  *     return true;
  *   }
- * 
+ *
  *   return false;
  * })
- * 
+ *
  * console.log(match?.every(val => val === true))
  */
 
@@ -60,7 +60,62 @@ import type { NodeChunk, Parameter } from "../types/trie";
  * '/example/*'
  */
 
-
+/**
+ * Parse Path
+ * ----------------------------------------------------------------------------
+ * Split the path into an array of data objects representing the path chunks.
+ * 
+ * @name parsePath
+ * @description 
+ * Split the path into an array of data objects representing the path chunks
+ * delimited by '/'. Each chunk is then parsed for parameters and RegExp. 
+ * Based on the parsing, the chunk is then flagged with the appropriate 
+ * NodeFlag which is used to determine the type of node for matching purposes.
+ * The label is the chunk value and the params is an array of parameter objects
+ * if any are defined. The parameter object contains the name, value, optional
+ * flag, and RegExp if defined. The RegExp is used to test the parameter value
+ * for a match. After parsing the path and creating the data objects, the array
+ * of data objects is returned.
+ *
+ * @param {string} path The path to parse
+ * @returns {Array<NodeChunk>} An array of data objects representing the path chunks split by '/'
+ * 
+ * @example
+ * const path = `/example/at/:hour(^\\d{2})h:minute(^\\d{2})m`;
+ * const chunks = parsePath(path);
+ *
+ * console.log(chunks);
+ * // [{
+ * //   "label": "",
+ * //   "type": 1,
+ * //   "params": null
+ * // }, {
+ * //   "label": "example",
+ * //   "type": 1,
+ * //   "params": null
+ * // }, {
+ * //   "label": "at",
+ * //   "type": 1,
+ * //   "params": null
+ * // }, {
+ * //   "label": ":hour(^\\d{2})h:minute(^\\d{2})m",
+ * //   "type": 106,
+ * //   "params": [
+ * //     {
+ * //       "name": "hour",
+ * //       "value": "(^\\d{2})h",
+ * //       "optional": false,
+ * //       "regexp": {}
+ * //     },
+ * //     {
+ * //       "name": "minute",
+ * //       "value": "(^\\d{2})m",
+ * //       "optional": false,
+ * //       "regexp": {}
+ * //     }
+ * //   ]
+ * // }]
+ */
 export const parsePath = (path: string): Array<NodeChunk> => {
   const nodeChunks: Array<NodeChunk> = [];
 
