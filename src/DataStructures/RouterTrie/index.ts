@@ -93,7 +93,7 @@ export default class Trie implements RouterTrie {
     }
 
     if (!handler) {
-      throw new InvalidPathError('Handler not provided');
+      throw new InvalidPathError('Handler function not provided');
     }
 
     // let currentNode = this.root;

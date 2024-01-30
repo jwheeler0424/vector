@@ -132,6 +132,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
   let paramCount = 0;
   let regexpFlag = false;
   let regexpStack: string[] = [];
+  let wildcardFlag = false;
 
   for (let i = 0; i < path.length; i++) {
     const char = path[i];
@@ -142,6 +143,11 @@ export const parsePath = (path: string): Array<NodeChunk> => {
         throw new InvalidPathError(
           'Path must start with "/" or be a wildcard "*"',
         );
+      }
+
+      // Check if wildcard is already defined
+      if (wildcardFlag) {
+        throw new InvalidPathError('A wildcard "*" cannot be followed by any characters');
       }
       chunkValue += char;
 
@@ -576,8 +582,10 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
       // Check for wildcard
       if (char === '*') {
+        wildcardFlag = true;
+
         // Check if wildcard is already defined
-        if (isFlag(nodeType, NodeFlag.WILDCARD)) {
+        if (isFlag(nodeType, NodeFlag.WILDCARD) && wildcardFlag) {
           throw new InvalidPathError('A wildcard "*" is already defined');
         }
 
@@ -719,6 +727,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
     paramCount = 0;
     regexpFlag = false;
     regexpStack = [];
+    wildcardFlag = false;
   }
 
   return nodeChunks;
