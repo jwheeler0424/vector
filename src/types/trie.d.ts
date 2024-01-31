@@ -1,5 +1,4 @@
 import type { HandlerFunction } from '@/types/handler';
-import { HttpMethod } from './http';
 import { CharMap, NodeFlag } from '@/Maps';
 
 type Char = keyof typeof CharMap;
@@ -8,11 +7,11 @@ type RouterNode = {
   /* Router Node data */
   label: string | null;
   parent: RouterNode | null;
+  handler: HandlerFunction | null;
 
   /* Router Node maps */
   children: Array<RouterNode> | null;
   staticChildren: Map<string, RouterNode> | null;
-  methods: Map<HttpMethod, HandlerFunction> | null;
 
   /* Router Node flags */
   type: (typeof NodeFlag)[keyof typeof NodeFlag] | null;

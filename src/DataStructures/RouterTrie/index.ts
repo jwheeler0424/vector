@@ -102,13 +102,24 @@ export default class Trie implements RouterTrie {
     const pathDepth = pathChunks.length;
 
     // Traverse the path and create nodes for each chunk
-    for (const chunk of pathChunks) {
+    for (let i = 0; i < pathDepth; i++) {
+      const chunk = pathChunks[i];
+      const isLeaf = i === pathDepth - 1;
       const child = currentNode.getChild(chunk.label);
+
+      if (child && isLeaf) {
+        throw new InvalidPathError('Path already exists');
+      }
 
       if (!child) {
         const newNode = new Node({
           label: chunk.label,
           parent: currentNode,
+          type: chunk.type,
+          isLeaf,
+          path: isLeaf? path : null,
+          handler: isLeaf? handler : null,
+          params: chunk.params,
         });
 
         currentNode.addChild(newNode);
