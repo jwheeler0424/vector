@@ -9,22 +9,22 @@ import type { NodeChunk, Parameter } from '../types/trie';
  * ------------------------------------------
  *  0  0  0  0  0  0  0  0
  * ------------------------
- *  W  M  R  N  M  O  P  S
- *  I  U  E  O  U  P  A  T
- *  L  L  G  N  L  T  R  A
- *  D  T  E  P  T  P  A  T
- *  C  I  X  A  I  A  M  I
- *  A     P  R     R     C
- *  R        A     A
- *  D        M     M
+ *  W  M  O  P  M  R  N  S
+ *  I  U  P  A  U  E  O  T
+ *  L  L  T  R  L  G  N  A
+ *  D  T  P  A  T  E  P  T
+ *  C  I  A  M  I  X  A  I
+ *  A     R        P  R  C
+ *  R     A           A
+ *  D     M           M
  * ------------------------------------------
  *  0 | 1 << 0 | STATIC          // 1
  *  0 | 1 << 1 | NON_PARAM       // 2
- *  0 | 1 << 2 | PARAM           // 4
- *  0 | 1 << 3 | OPT_PARAM       // 8
- *  0 | 1 << 4 | MULTI_PARAM     // 16
- *  0 | 1 << 5 | REGEXP          // 32
- *  0 | 1 << 6 | MULTI_REGEXP    // 64
+ *  0 | 1 << 5 | REGEXP          // 4
+ *  0 | 1 << 6 | MULTI_REGEXP    // 8
+ *  0 | 1 << 2 | PARAM           // 16
+ *  0 | 1 << 3 | OPT_PARAM       // 32
+ *  0 | 1 << 4 | MULTI_PARAM     // 64
  *  0 | 1 << 7 | WILDCARD        // 128
  *
  *
@@ -100,19 +100,19 @@ import type { NodeChunk, Parameter } from '../types/trie';
  * //   "params": null
  * // }, {
  * //   "label": ":hour(^\\d{2})h:minute(^\\d{2})m",
- * //   "type": 106,
+ * //   "type": 92,
  * //   "params": [
  * //     {
  * //       "name": "hour",
  * //       "value": "(^\\d{2})h",
  * //       "optional": false,
- * //       "regexp": {}
+ * //       "regexp": /(^\\d{2})h/g
  * //     },
  * //     {
  * //       "name": "minute",
  * //       "value": "(^\\d{2})m",
  * //       "optional": false,
- * //       "regexp": {}
+ * //       "regexp": /(^\\d{2})m/g
  * //     }
  * //   ]
  * // }]
@@ -759,10 +759,3 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
   return nodeChunks;
 };
-
-/**
- * Optional paths are not allowed to have multiple parameters or additional nodes
- * following the optional path. This is because the optional path is not required
- * to be present and therefore the path cannot be matched. This is a limitation
- * of the current implementation and may be addressed in a future release.
- */

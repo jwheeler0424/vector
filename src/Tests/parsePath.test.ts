@@ -53,7 +53,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
       },
       {
         label: ":id",
-        type: 4,
+        type: 16,
         params: [
           {
             name: "id",
@@ -88,7 +88,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
       },
       {
         label: ":id?",
-        type: 12,
+        type: 48,
         params: [
           {
             name: "id",
@@ -123,7 +123,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
       },
       {
         label: ":lat-:lng",
-        type: 20,
+        type: 80,
         params: [
           {
             name: "lat",
@@ -146,7 +146,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
       },
       {
         label: ":r",
-        type: 4,
+        type: 16,
         params: [
           {
             name: "r",
@@ -209,7 +209,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
       },
       {
         label: "(^\\d+)",
-        type: 32,
+        type: 4,
         params: [
           {
             name: "",
@@ -244,7 +244,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
       },
       {
         label: "(^\\d{2})h(^\\d{2})m",
-        type: 96,
+        type: 12,
         params: [
           {
             "name": "",
@@ -265,7 +265,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
 
   // Testing path with multiple regular expressions, WITH PARAMS
   test(' MULTI_REGPAR -> /example/image/:file(^\\d+).:ext(png | jpg)', () => {
-    const path = '/example/image/:file(^\\d+).:ext(png | jpg | jpeg | gif)';
+    const path = '/example/image/:file(^\\d+).:ext(png | jpg)';
     const result = parsePath(path);
     expect(result).toEqual([
       {
@@ -284,8 +284,8 @@ describe('ParsePath - Accepted Parsed Result', () => {
         params: null
       },
       {
-        label: ":file(^\\d+).:ext(png | jpg | jpeg | gif)",
-        type: 116,
+        label: ":file(^\\d+).:ext(png | jpg)",
+        type: 92,
         params: [
           {
             "name": "file",
@@ -295,9 +295,9 @@ describe('ParsePath - Accepted Parsed Result', () => {
           },
           {
             "name": "ext",
-            "value": "(png | jpg | jpeg | gif)",
+            "value": "(png | jpg)",
             "optional": false,
-            "regexp": new RegExp("(png | jpg | jpeg | gif)")
+            "regexp": new RegExp("(png | jpg)")
           }
         ]
       }
@@ -326,7 +326,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
       },
       {
         label: ":hour(^\\d{2})h:minute(^\\d{2})m",
-        type: 116,
+        type: 92,
         params: [
           {
             "name": "hour",
