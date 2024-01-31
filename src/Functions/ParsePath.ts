@@ -117,7 +117,7 @@ import type { NodeChunk, Parameter } from '../types/trie';
  * //   ]
  * // }]
  */
-export const parsePath = (path: string): Array<NodeChunk> => {
+const parsePath = (path: string): Array<NodeChunk> => {
   const nodeChunks: Array<NodeChunk> = [];
 
   let paramAr: Array<Parameter> = [];
@@ -759,3 +759,5 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
   return nodeChunks;
 };
+
+export default parsePath;

@@ -1,6 +1,8 @@
-import type { NodeFlag, Parameter, RouterNode } from '@/types/trie';
+import type { Parameter, RouterNode } from '@/types/trie';
 import type { HandlerFunction } from '@/types/handler';
 import type { HttpMethod } from '@/types/http';
+import { isFlag } from '@/helpers';
+import { NodeFlag } from '@/Maps';
 
 /**
  * Router Node Structure
@@ -47,10 +49,11 @@ export class Node implements RouterNode {
 
   /* Router Node maps */
   children: Array<RouterNode> | null;
+  staticChildren: Map<string, RouterNode> | null;
   methods: Map<HttpMethod, HandlerFunction> | null;
 
   /* Router Node flags */
-  type: NodeFlag | null;
+  type: (typeof NodeFlag)[keyof typeof NodeFlag] | null;
   isLeaf: boolean;
 
   /* Router Node Leaf Data */
@@ -61,10 +64,46 @@ export class Node implements RouterNode {
     this.label = node?.label ?? null;
     this.parent = node?.parent ?? null;
     this.children = node?.children ?? null;
+    this.staticChildren = node?.staticChildren ?? null;
     this.isLeaf = node?.isLeaf ?? false;
     this.type = node?.type ?? null;
     this.methods = node?.methods ?? null;
     this.path = node?.path ?? null;
     this.params = node?.params ?? null;
+  }
+
+  getChild(label: string): RouterNode | undefined {
+    if (!this.children && !this.staticChildren) return undefined;
+
+    let child: RouterNode | undefined = this.staticChildren?.get(label);
+    if (child) return child;
+
+    if (!this.children) return undefined;
+
+    for (child of this.children) {
+      // check if the child node contains regexp
+
+      // check if the child node contains a param or opt-param
+
+      // check if the child node contains a multi-param
+
+      // check if the node is a wildcard node
+      if (child.label === '*') return child;
+    }
+
+    return undefined;
+  }
+
+  addChild(node: RouterNode): void {
+    // Check if static or dynamic node
+    if (isFlag(node?.type ?? 0, NodeFlag.STATIC)) {
+      if (!this.staticChildren) this.staticChildren = new Map();
+      this.staticChildren.set(node?.label ?? '', node);
+      return;
+    }
+
+    if (!this.children) this.children = [];
+    this.children.push(node);
+    this.children.sort((a, b) => (a?.type ?? 0) - (b?.type ?? 0));
   }
 }

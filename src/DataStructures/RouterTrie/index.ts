@@ -6,6 +6,7 @@ import type { UCaseHttpMethod } from '@/types/http';
 import type { HandlerFunction } from '@/types/handler';
 import { Methods } from '@/Maps';
 import { InvalidPathError } from '@/Errors';
+import { parsePath } from '@/Functions';
 
 /**
  * RouterTrie
@@ -96,13 +97,29 @@ export default class Trie implements RouterTrie {
       throw new InvalidPathError('Handler function not provided');
     }
 
-    // let currentNode = this.root;
-    // let pathIndex = 0;
-    // let labelIndex = 0;
-    // let pathDepth = 0;
+    let currentNode = this.root;
+    const pathChunks = parsePath(path);
+    const pathDepth = pathChunks.length;
 
-    // // Update the depth of the trie
-    // this.depth = Math.max(this.depth, pathDepth);
+    // Traverse the path and create nodes for each chunk
+    for (const chunk of pathChunks) {
+      const child = currentNode.getChild(chunk.label);
+
+      if (!child) {
+        const newNode = new Node({
+          label: chunk.label,
+          parent: currentNode,
+        });
+
+        currentNode.addChild(newNode);
+        currentNode = newNode;
+      } else {
+        currentNode = child;
+      }
+    }
+
+    // Update the depth of the trie
+    this.depth = Math.max(this.depth, pathDepth);
 
     return;
   }

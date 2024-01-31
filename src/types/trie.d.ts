@@ -3,7 +3,6 @@ import { HttpMethod } from './http';
 import { CharMap, NodeFlag } from '@/Maps';
 
 type Char = keyof typeof CharMap;
-type NodeFlag = (typeof NodeFlag)[keyof typeof NodeFlag];
 
 type RouterNode = {
   /* Router Node data */
@@ -12,15 +11,20 @@ type RouterNode = {
 
   /* Router Node maps */
   children: Array<RouterNode> | null;
+  staticChildren: Map<string, RouterNode> | null;
   methods: Map<HttpMethod, HandlerFunction> | null;
 
   /* Router Node flags */
-  type: NodeFlag | null;
+  type: (typeof NodeFlag)[keyof typeof NodeFlag] | null;
   isLeaf: boolean;
 
   /* Router Node Leaf Data */
   path: string | null;
   params: Array<Parameter> | null;
+
+  /* Router Node methods */
+  getChild(label: string): RouterNode | undefined;
+  addChild(node: RouterNode): void;
 };
 
 type MatchedRoute = {
