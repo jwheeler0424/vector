@@ -1,5 +1,5 @@
 import { InvalidPathError } from '../Errors';
-import { NodeFlag } from '../Maps';
+import { InvalidChars, NodeFlag } from '../Maps';
 import { isFlag, validParamChar } from '../helpers';
 import type { NodeChunk, Parameter } from '../types/trie';
 
@@ -130,6 +130,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
   let paramFlag = false;
   let paramIndex = 0;
   let paramCount = 0;
+  let optionalFlag = false;
   let regexpFlag = false;
   let regexpStack: string[] = [];
   let wildcardFlag = false;
@@ -151,6 +152,14 @@ export const parsePath = (path: string): Array<NodeChunk> => {
           'A wildcard "*" cannot be followed by any characters',
         );
       }
+
+      // Check if optional flag is true
+      if (optionalFlag) {
+        throw new InvalidPathError(
+          'An optional path cannot have multiple parameters or additional characters following the optional parameter',
+        );
+      }
+
       chunkValue += char;
 
       // Check if currently defining parameter
@@ -244,6 +253,7 @@ export const parsePath = (path: string): Array<NodeChunk> => {
                 'A parameter cannot be optional and multiparam',
               );
             }
+            optionalFlag = true;
             nodeType += NodeFlag.OPT_PARAM;
             param.optional = true;
             paramFlag = false;
@@ -607,6 +617,13 @@ export const parsePath = (path: string): Array<NodeChunk> => {
         continue;
       }
 
+      // Check for invalid characters
+      if (InvalidChars[char]) {
+        throw new InvalidPathError(
+          `Invalid character "${char}" found in path at position ${i}`,
+        );
+      }
+
       if (paramValue) paramValue += char;
 
       // Check if last character and push chunk to array
@@ -742,3 +759,10 @@ export const parsePath = (path: string): Array<NodeChunk> => {
 
   return nodeChunks;
 };
+
+/**
+ * Optional paths are not allowed to have multiple parameters or additional nodes
+ * following the optional path. This is because the optional path is not required
+ * to be present and therefore the path cannot be matched. This is a limitation
+ * of the current implementation and may be addressed in a future release.
+ */

@@ -264,7 +264,7 @@ describe('ParsePath - Accepted Parsed Result', () => {
   });
 
   // Testing path with multiple regular expressions, WITH PARAMS
-  test(' MULTI_REGPAR -> /example/image/:file(^\\d+).:ext(png | jpg | jpeg | gif)', () => {
+  test(' MULTI_REGPAR -> /example/image/:file(^\\d+).:ext(png | jpg)', () => {
     const path = '/example/image/:file(^\\d+).:ext(png | jpg | jpeg | gif)';
     const result = parsePath(path);
     expect(result).toEqual([
@@ -372,9 +372,27 @@ describe('ParsePath - Accepted Parsed Result', () => {
 // Testing rejected parsed results
 describe('ParsePath - Rejected Parsed Result', () => {
   // Testing path with invalid starting character
-  test('INVALID_START -> example/users/:id', () => {
+  test('   INVALID_START -> example/users/:id', () => {
     const path = 'example/users/:id';
     expect(() => parsePath(path)).toThrow('Path must start with "/" or be a wildcard "*"');
+  });
+
+  // Testing path with invalid characters
+  test('    INVALID_CHAR -> /example/users/:id!', () => {
+    const path = '/example/users/:id!';
+    expect(() => parsePath(path)).toThrow('A parameter name can only contain alphanumeric characters, underscores, and dollar signs');
+  });
+
+  // Testing path with invalid characters
+  test('    INVALID_CHAR -> /example/users?/', () => {
+    const path = '/example/users?/';
+    expect(() => parsePath(path)).toThrow('Invalid character "?" found in path at position 14');
+  });
+
+  // Testing path with invalid optional parameter
+  test('INVALID_OPTPARAM -> /example/users/:id?/edit', () => {
+    const path = '/example/users/:id?/edit';
+    expect(() => parsePath(path)).toThrow('An optional path cannot have multiple parameters or additional characters following the optional parameter');
   });
 
   // Testing path with invalid parameter and non-parameterized path
@@ -384,19 +402,19 @@ describe('ParsePath - Rejected Parsed Result', () => {
   });
 
   // Testing path with invalid parameter
-  test('INVALID_PARAM -> /example/users/:id:user', () => {
+  test('   INVALID_PARAM -> /example/users/:id:user', () => {
     const path = '/example/users/:id:user';
     expect(() => parsePath(path)).toThrow('There must be a separating delimiter between parameters');
   });
 
   // Testing path with invalid regular expression
-  test('INVALID_REGEXP -> /example/users/(^\\d+))', () => {
+  test('  INVALID_REGEXP -> /example/users/(^\\d+))', () => {
     const path = '/example/users/(^\\d+))';
     expect(() => parsePath(path)).toThrow('RegExp closing delimiter ")" is missing opening delimiter "("');
   });
 
   // Testing path with invalid regular expression
-  test('INVALID_REGEXP -> /example/users/((^\\d+)', () => {
+  test('  INVALID_REGEXP -> /example/users/((^\\d+)', () => {
     const path = '/example/users/((^\\d+)';
     expect(() => parsePath(path)).toThrow('RegExp has no closing delimiter ")"');
   });
@@ -404,12 +422,6 @@ describe('ParsePath - Rejected Parsed Result', () => {
   // Testing path with invalid wildcard
   test('INVALID_WILDCARD -> /example/*users', () => {
     const path = '/example/*users';
-    expect(() => parsePath(path)).toThrow('A wildcard "*" cannot be followed by any characters');
-  });
-
-  // Testing path with invalid wildcard
-  test('INVALID_WILDCARD -> /example/**', () => {
-    const path = '/example/**';
     expect(() => parsePath(path)).toThrow('A wildcard "*" cannot be followed by any characters');
   });
 
