@@ -1,7 +1,7 @@
-import { InvalidPathError } from '../Errors';
-import { InvalidChars, NodeFlag } from '../Maps';
-import { isFlag, validParamChar } from '../helpers';
-import type { NodeChunk, Parameter } from '../types/trie';
+import { InvalidPathError } from '@/Errors';
+import { InvalidChars, NodeFlag } from '@/Maps';
+import { isFlag, validParamChar } from '@/helpers';
+import type { NodeChunk, Parameter } from '@/types/trie';
 
 /**
  * ------------------------------------------

@@ -1,5 +1,5 @@
 import {describe, expect, test} from '@jest/globals';
-import { parsePath } from "../Functions/ParsePath";
+import { parsePath } from "@/Functions";
 
 // Testing accepted parsed results
 describe('ParsePath - Accepted Parsed Result', () => {
